@@ -1,0 +1,4 @@
+VERSION = (0, 0, 1)
+
+INTERNAL_PROJECTS_REPOSITORY = "checker21.projects"
+
