@@ -1,25 +1,9 @@
 from checker21.checkers import *
-from checker21.application import app
-
 
 __all__ = ('Subject',)
 
 
-class SubjectBase(type):
-
-	def __new__(mcs, name, bases, attrs, **kwargs):
-		new_cls = super().__new__(mcs, name, bases, attrs, **kwargs)  # type: Subject
-		# Also ensure initialization is only performed for subclasses of Model
-		# (excluding Model class itself).
-		parents = [b for b in bases if isinstance(b, SubjectBase)]
-		if not parents:
-			return new_cls
-
-		app.register_project(new_cls)
-		return new_cls
-
-
-class Subject(metaclass=SubjectBase):
+class Subject:
 	bonus = False
 
 	allowed_files = []
