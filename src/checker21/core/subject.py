@@ -2,16 +2,16 @@ from checker21.checkers import *
 from checker21.application import app
 
 
-__all__ = ('Project',)
+__all__ = ('Subject',)
 
 
-class ProjectBase(type):
+class SubjectBase(type):
 
 	def __new__(mcs, name, bases, attrs, **kwargs):
-		new_cls = super().__new__(mcs, name, bases, attrs, **kwargs)  # type: Project
+		new_cls = super().__new__(mcs, name, bases, attrs, **kwargs)  # type: Subject
 		# Also ensure initialization is only performed for subclasses of Model
 		# (excluding Model class itself).
-		parents = [b for b in bases if isinstance(b, ProjectBase)]
+		parents = [b for b in bases if isinstance(b, SubjectBase)]
 		if not parents:
 			return new_cls
 
@@ -19,7 +19,7 @@ class ProjectBase(type):
 		return new_cls
 
 
-class Project(metaclass=ProjectBase):
+class Subject(metaclass=SubjectBase):
 	bonus = False
 
 	allowed_files = []

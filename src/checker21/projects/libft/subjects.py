@@ -1,7 +1,7 @@
-from checker21.core import Project
+from checker21.core import Subject
 
 
-class LibftProject(Project):
+class LibftSubject(Subject):
 
 	allowed_files = (
 		"*.c",

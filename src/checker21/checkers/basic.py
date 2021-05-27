@@ -8,7 +8,7 @@ class ForbiddenFilesChecker(Checker):
 	verbose_name = "Forbidden files checker"
 	description = "Checks if there is any forbidden file in the repository"
 
-	def run(self, project):
+	def run(self, subject):
 		pass  # TODO code ForbiddenFilesChecker
 
 
@@ -18,14 +18,14 @@ class ForbiddenFunctionsChecker(Checker):
 	verbose_name = "Forbidden functions checker"
 	description = "Checks if the project uses a forbidden function"
 
-	def run(self, project):
-		self.check_executable(project)
-		self.check_source_files(project)
+	def run(self, subject):
+		self.check_executable(subject)
+		self.check_source_files(subject)
 
 	@staticmethod
-	def check_executable(project):
+	def check_executable(subject):
 		executable = "a.out"  # TODO get executable from project setup
-		allowed_functions = set(project.allowed_functions)
+		allowed_functions = set(subject.allowed_functions)
 		forbidden_functions = set()
 
 		allowed_functions.add('__libc_start_main')
@@ -47,6 +47,6 @@ class ForbiddenFunctionsChecker(Checker):
 		if forbidden_functions:
 			print(forbidden_functions)
 
-	def check_source_files(self, project):
+	def check_source_files(self, subject):
 		pass  # TODO check source files for forbidden functions
 

@@ -1,2 +1,2 @@
 from .checker import *
-from .project import *
+from .subject import *
