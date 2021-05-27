@@ -8,11 +8,11 @@ class Checker:
 	verbose_name = None
 	description = None
 
-	def run(self, project):
+	def run(self, subject):
 		pass
 
-	def __call__(self, project):
-		self.run(project)
+	def __call__(self, subject):
+		self.run(subject)
 
 	def __str__(self):
 		return str(self.verbose_name or self.name)
