@@ -26,6 +26,8 @@ def parse_pattern(pattern: str) -> List[str]:
         file_name = re.findall(r'[^\.()]+', pattern)
         for extension in extensions_list:
             patterns.append(file_name[0] + '.' + extension)
+    else:
+        patterns.append(pattern)
     return patterns
 
 
