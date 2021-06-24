@@ -20,6 +20,7 @@ class Palette:
 	SUCCESS = NO_STYLE
 	WARNING = NO_STYLE
 	NOTICE  = NO_STYLE
+	INFO    = NO_STYLE
 
 	def update(self, palette):
 		self.__dict__.update(palette.__dict__)
@@ -35,3 +36,4 @@ class ColoredPalette(Palette):
 	SUCCESS = Style('green',    opts = ('bold',))
 	WARNING = Style('yellow',   opts = ('bold',))
 	NOTICE  = Style('red')
+	INFO    = Style('blue')

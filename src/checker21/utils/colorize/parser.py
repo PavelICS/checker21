@@ -16,7 +16,7 @@ def parse_color_setting(config_string):
 	definitions for each role. Any individual definitions following the palette
 	definition will augment the base palette definition.
 	Valid roles:
-		'error', 'success', 'warning', 'notice'
+		'error', 'success', 'warning', 'notice', 'info'
 	Valid colors:
 		'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'
 	Valid options:
