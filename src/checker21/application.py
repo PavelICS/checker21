@@ -1,12 +1,16 @@
-import importlib
-
 from checker21.conf import settings
 from checker21.core import Subject
-
+from checker21.core.project import get_projects
 
 class Application:
 	active_subject = None
 	subjects = {}
+
+	def get_projects(self):
+		return get_projects()
+
+	def get_project(self, name):
+		return self.get_projects()[name]
 
 	def register(self, instance=None, *, module=None):
 		def do_registration(_instance):
@@ -32,7 +36,7 @@ class Application:
 			return self.subjects[name]
 
 		self.subjects[name] = []
-		importlib.import_module(f"{settings.INTERNAL_PROJECTS_REPOSITORY}.{name}")
+		self.get_project(name).load()
 		return self.subjects[name]
 
 	def get_subjects(self, name):
