@@ -2,7 +2,7 @@
 __all__ = ('get_project_name', )
 
 aliases = {
-
+	'gnl': 'get_next_line',
 }
 
 
