@@ -1,4 +1,4 @@
-from checker21.manage import main
+from checker21 import management
 
-main()
+management.execute_from_command_line()
 
