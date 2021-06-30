@@ -21,6 +21,7 @@ class Command(BaseCommand):
 			self.stdout.write("")
 			for project_name in sorted(app.get_projects()):
 				self.stdout.write(f"    {self.format_project_name(project_name)}")
+			self.stdout.write("")
 
 	def format_project_name(self, project_name):
 		aliases = self.get_aliases(project_name)

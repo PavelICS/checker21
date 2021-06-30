@@ -17,7 +17,7 @@ class GnlWarMachineChecker(GitChecker):
 	def run(self, subject):
 		os.chdir(self.target_dir)
 		self.git_config()
-		bash(['grademe.sh'], stdout=self.stdout, stderr=self.stderr)
+		bash(['/bin/bash', 'grademe.sh'], stdout=self.stdout, stderr=self.stderr)
 		os.chdir('..')
 
 	def git_config(self):
@@ -44,7 +44,7 @@ class GnlKillerChecker(GitChecker):
 	def run(self, subject):
 		os.chdir(self.target_dir)
 		self.git_config()
-		bash(['run.sh'], stdout = self.stdout, stderr = self.stderr)
+		bash(['/bin/bash', 'run.sh'], stdout = self.stdout, stderr = self.stderr)
 		os.chdir('..')
 
 	def git_config(self):
@@ -61,4 +61,4 @@ class GnlKillerChecker(GitChecker):
 		with config_backup.open('wb') as f:
 			f.write(data)
 		with config.open('wb') as f:
-			f.write(re.sub(rb'(echo[^\n]+OK)', rb'#\1', data))
+			f.write(re.sub(rb'(echo[^\n]+OK)', rb': #\1', data))
