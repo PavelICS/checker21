@@ -27,3 +27,14 @@ def find_files_by_pattern(path, pattern, *, recursive=True):
 		if regexp.match(str(file)):
 			yield file
 
+def update_file_with_backup(path, callback):
+	file = Path(path)
+	backup = file.with_suffix(file.suffix + '.backup')
+	if backup.exists():
+		return
+	with file.open('rb') as f:
+		data = f.read()
+	with backup.open('wb') as f:
+		f.write(data)
+	with file.open('wb') as f:
+		f.write(callback(data))

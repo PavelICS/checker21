@@ -4,6 +4,7 @@ from pathlib import Path
 
 from checker21.core import GitChecker
 from checker21.utils.bash import bash
+from checker21.utils.files import update_file_with_backup
 
 
 class GnlWarMachineChecker(GitChecker):
@@ -21,16 +22,9 @@ class GnlWarMachineChecker(GitChecker):
 		os.chdir('..')
 
 	def git_config(self):
-		config = Path('my_config.sh')
-		config_backup = Path('my_config.sh.backup')
-		if config_backup.exists():
-			return
-		with config.open('rb') as f:
-			data = f.read()
-		with config_backup.open('wb') as f:
-			f.write(data)
-		with config.open('wb') as f:
-			f.write(data.replace(b'../../get_next_line', b'../'))
+		def callback(data):
+			return data.replace(b'../../get_next_line', b'../')
+		update_file_with_backup('my_config.sh', callback)
 
 
 class GnlKillerChecker(GitChecker):
@@ -52,13 +46,6 @@ class GnlKillerChecker(GitChecker):
 		bash(['cp', '../get_next_line.c', '.'])
 		bash(['cp', '../get_next_line_utils.c', '.'])
 
-		config = Path('run.sh')
-		config_backup = Path('run.sh.backup')
-		if config_backup.exists():
-			return
-		with config.open('rb') as f:
-			data = f.read()
-		with config_backup.open('wb') as f:
-			f.write(data)
-		with config.open('wb') as f:
-			f.write(re.sub(rb'(echo[^\n]+OK)', rb': #\1', data))
+		def callback(data):
+			return re.sub(rb'(echo[^\n]+OK)', rb': #\1', data)
+		update_file_with_backup('run.sh', callback)
