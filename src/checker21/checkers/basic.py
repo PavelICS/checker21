@@ -1,5 +1,6 @@
 from checker21.core import Checker
 from checker21.utils.bash import bash
+from checker21.utils.files import find_files, compile_path_pattern
 
 
 class ForbiddenFilesChecker(Checker):
@@ -9,7 +10,28 @@ class ForbiddenFilesChecker(Checker):
 	description = "Checks if there is any forbidden file in the repository"
 
 	def run(self, subject):
-		pass  # TODO code ForbiddenFilesChecker
+		# check only committed files
+		files = self.git_list_files()
+		if files is None:
+			# if there is no git, check all files
+			# TODO skip check external files, like downloaded from git or compiled by make files
+			files = find_files('.')
+
+		pattern = compile_path_pattern("({})".format('|'.join(subject.allowed_files)))
+		for file in files:
+			if not pattern.match(str(file)):
+				self.stdout.write(self.style.ERROR(str(file)))
+
+	def git_list_files(self):
+		cmd = bash(['git', 'ls-files'])
+		if cmd.stderr:
+			return None
+		files = []
+		for line in cmd.stdout.split(b'\n'):
+			line = line.decode().strip()
+			if line:
+				files.append(line)
+		return files
 
 
 class ForbiddenFunctionsChecker(Checker):

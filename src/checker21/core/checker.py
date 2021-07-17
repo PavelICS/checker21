@@ -4,7 +4,9 @@ __all__ = ('Checker', 'GitChecker')
 import sys
 from pathlib import Path
 
+from checker21.management.base import OutputWrapper
 from checker21.utils.bash import bash
+from checker21.utils.colorize import PALETTES, NO_COLOR_PALETTE
 
 
 class Checker:
@@ -13,9 +15,10 @@ class Checker:
 	verbose_name = None
 	description = None
 
-	def __init__(self, *, stdout=None, stderr=None):
-		self.stdout = stdout or sys.stdout
-		self.stderr = stderr or sys.stderr
+	def __init__(self, *, stdout=None, stderr=None, style=None):
+		self.stdout = stdout or OutputWrapper(sys.stdout)
+		self.stderr = stderr or OutputWrapper(sys.stderr)
+		self.style = style or PALETTES[NO_COLOR_PALETTE]
 
 	def run(self, subject):
 		pass
@@ -28,6 +31,9 @@ class Checker:
 
 	def __repr__(self):
 		return f"<{self.__class__}>[{self}]"
+
+	def clean(self):
+		pass
 
 
 class GitChecker(Checker):
@@ -58,7 +64,7 @@ class GitChecker(Checker):
 		           stdout = self.stdout,
 		           stderr = self.stderr)
 
-	def git_clean(self):
+	def clean(self):
 		"""
 			Deletes downloaded git files
 		"""
@@ -66,6 +72,7 @@ class GitChecker(Checker):
 			bash(['rm', '-rf', self.target_dir],
 		           stdout = self.stdout,
 		           stderr = self.stderr)
+		super().clean()
 
 	def git_is_ok_to_delete(self, target_dir):
 		"""
