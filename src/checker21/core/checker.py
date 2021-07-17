@@ -1,4 +1,3 @@
-
 __all__ = ('Checker', 'GitChecker')
 
 import sys
@@ -10,12 +9,16 @@ from checker21.utils.colorize import PALETTES, NO_COLOR_PALETTE
 
 
 class Checker:
-
 	name = None
 	verbose_name = None
 	description = None
 
-	def __init__(self, *, stdout=None, stderr=None, style=None):
+	def __init__(self):
+		self.stdout = None
+		self.stderr = None
+		self.style = None
+
+	def init_io(self, stdout=None, stderr=None, style=None):
 		self.stdout = stdout or OutputWrapper(sys.stdout)
 		self.stderr = stderr or OutputWrapper(sys.stderr)
 		self.style = style or PALETTES[NO_COLOR_PALETTE]
@@ -61,8 +64,8 @@ class GitChecker(Checker):
 		if self.target_dir:
 			cmd_args.append(self.target_dir)
 		cmd = bash(cmd_args,
-		           stdout = self.stdout,
-		           stderr = self.stderr)
+					stdout=self.stdout,
+					stderr=self.stderr)
 
 	def clean(self):
 		"""
@@ -70,8 +73,8 @@ class GitChecker(Checker):
 		"""
 		if self.git_is_ok_to_delete(self.target_dir):
 			bash(['rm', '-rf', self.target_dir],
-		           stdout = self.stdout,
-		           stderr = self.stderr)
+				stdout=self.stdout,
+				stderr=self.stderr)
 		super().clean()
 
 	def git_is_ok_to_delete(self, target_dir):
@@ -87,4 +90,3 @@ class GitChecker(Checker):
 		if target_dir.starswith('/'):
 			return False
 		return True
-

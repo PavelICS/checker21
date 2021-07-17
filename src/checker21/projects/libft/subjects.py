@@ -4,6 +4,7 @@ from checker21.application import app
 
 @app.register
 class LibftSubject(Subject):
+	check_norminette = True
 
 	allowed_files = (
 		"*.c",

@@ -5,6 +5,7 @@ from .checkers import *
 
 @app.register
 class GnlSubject(Subject):
+	check_norminette = True
 
 	allowed_files = (
 		"get_next_line(_bonus)?.c",
