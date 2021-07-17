@@ -20,5 +20,5 @@ class GnlSubject(Subject):
 
 	checkers = [
 		GnlWarMachineChecker(),
-		GnlKillerChecker(),
+		# GnlKillerChecker(),
 	]
