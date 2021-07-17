@@ -18,13 +18,16 @@ class GnlWarMachineChecker(GitChecker):
 	def run(self, subject):
 		os.chdir(self.target_dir)
 		self.git_config()
-		bash(['/bin/bash', 'grademe.sh'], stdout=self.stdout, stderr=self.stderr)
+		cmd = bash(['/bin/bash', 'grademe.sh'], capture_output=False)
 		os.chdir('..')
 
 	def git_config(self):
 		def callback(data):
-			# change path in config to source files
-			return data.replace(b'../../get_next_line', b'../')
+			# Change path in config to source files
+			data = data.replace(b'../../get_next_line', b'../')
+			# Turn off norminette checker. We have our own norminette check
+			data = data.replace(b'NORM=1', b'NORM=0')
+			return data
 		update_file_with_backup('my_config.sh', callback)
 
 
@@ -40,7 +43,7 @@ class GnlKillerChecker(GitChecker):
 	def run(self, subject):
 		os.chdir(self.target_dir)
 		self.git_config()
-		bash(['/bin/bash', 'run.sh'], stdout = self.stdout, stderr = self.stderr)
+		bash(['/bin/bash', 'run.sh'], stdout=self.stdout, stderr=self.stderr)
 		os.chdir('..')
 
 	def git_config(self):

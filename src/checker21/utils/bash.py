@@ -2,7 +2,7 @@ import subprocess
 import sys
 
 
-def bash(command, *, echo=True, stdout=None, stderr=None):
+def bash(command, *, echo=True, stdout=None, stderr=None, capture_output=True):
 	if echo:
 		if isinstance(command, str):
 			print(command)
@@ -11,7 +11,7 @@ def bash(command, *, echo=True, stdout=None, stderr=None):
 
 	options = {}
 	if stdout is None and stderr is None:
-		options['capture_output'] = True
+		options['capture_output'] = capture_output
 	else:
 		options['stdout'] = stdout
 		options['stderr'] = stderr
