@@ -10,10 +10,16 @@ class ForbiddenFilesChecker(Checker):
 	description = "Checks if there is any forbidden file in the repository"
 
 	def run(self, subject):
+		forbidden_files_count = 0
 		pattern = compile_path_pattern("({})".format('|'.join(subject.allowed_files)))
+
 		for file in subject.list_files():
 			if not pattern.match(str(file)):
+				forbidden_files_count += 1
 				self.stdout.write(self.style.ERROR(str(file)))
+
+		if forbidden_files_count == 0:
+			self.stdout.write(self.style.SUCCESS("No forbidden files are found"))
 
 
 class ForbiddenFunctionsChecker(Checker):

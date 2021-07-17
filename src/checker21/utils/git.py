@@ -2,7 +2,7 @@ from checker21.utils.bash import bash
 
 
 def git_list_files():
-	cmd = bash(['git', 'ls-files'])
+	cmd = bash(['git', 'ls-files'], echo=False)
 	if cmd.stderr:
 		return None
 	files = []
