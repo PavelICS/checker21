@@ -20,6 +20,7 @@ try:
         status: str
         line: str
         errors: List[str]
+        warnings: List[str]
 except ImportError:
     TypedDict = None
     NorminetteFileCheckResult = Dict
@@ -58,6 +59,13 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
 
     filename = None
     active_record: Optional[NorminetteFileCheckResult] = None
+
+    def add_error(error):
+        if not active_record or "errors" not in active_record:
+            raise NorminetteException(f"Couldn't add errors to `{filename}`")
+        active_record["errors"].append(error)
+
+    last_warning = None
     for line in output.split("\n"):
         if line.endswith("OK!"):
             filename = line.rsplit(':', 1)[0]
@@ -66,6 +74,9 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
                 "line": line,
             }
             result[filename] = active_record
+            if last_warning:
+                active_record["warnings"] = [last_warning]
+                last_warning = None
             continue
 
         if line.endswith("Error!"):
@@ -87,16 +98,16 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
                 }
                 continue
 
-            if not active_record or "errors" not in active_record:
-                raise NorminetteException(f"Couldn't add errors to `{filename}`")
-            active_record["errors"].append(line)
+            add_error(line)
             continue
 
         if line.startswith("\t\x1b[31m"):
-            if not active_record or "errors" not in active_record:
-                raise NorminetteException(f"Couldn't add errors to `{filename}`")
             line = line.replace("\t\x1b[31m", '').replace("\x1b[0m'", '')
-            active_record["errors"].append(line)
+            add_error(line)
+            continue
+
+        if line.startswith("Missing"):
+            last_warning = line
             continue
 
         raise NorminetteException(f"Failed to parse line `{line}`")

@@ -30,3 +30,7 @@ class NorminetteChecker(Checker):
 				self.stdout.write(self.style.ERROR(info["line"]))
 				for error in info["errors"]:
 					self.stdout.write(error)
+
+			if "warnings" in info:
+				for warning in info["warnings"]:
+					self.stdout.write(self.style.WARNING(warning))
