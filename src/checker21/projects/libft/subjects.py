@@ -1,5 +1,6 @@
 from checker21.core import Subject
 from checker21.application import app
+from .checkers import *
 
 
 @app.register
@@ -19,3 +20,7 @@ class LibftSubject(Subject):
 		"malloc",
 		"free",
 	)
+
+	checkers = [
+		LibftUnitTestChecker(),
+	]

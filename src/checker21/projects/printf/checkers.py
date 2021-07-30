@@ -19,7 +19,6 @@ class PftChecker(GitChecker):
 		if subject.bonus:
 			bash(['./disable-test'], capture_output=False)
 			bash(['./enable-test', 'bonus'], capture_output=False)
-			bash(['make'], capture_output=False)
 		bash(['./disable-test', 'notintsubject'])
 		bash(['./disable-test', '"*_e_"'])
 		bash(['./disable-test', '"*_a_"'])
