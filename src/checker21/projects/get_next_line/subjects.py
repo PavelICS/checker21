@@ -20,6 +20,17 @@ class GnlSubject(Subject):
 	)
 
 	checkers = [
+		GnlTesterChecker(),
 		GnlWarMachineChecker(),
 		# GnlKillerChecker(),
 	]
+
+
+@app.register
+class GnlSubjectBonus(Subject):
+	bonus = True
+
+	checkers = [
+		GnlTesterChecker(),
+	]
+

@@ -45,9 +45,18 @@ class GitChecker(Checker):
 
 	def __call__(self, project, subject):
 		assert self.git_url, "<GitChecker> should have `git_url` set"
+
+		is_executed = False
 		with project.temp_folder:
 			self.git_clone()
-			super().__call__(project, subject)
+			if not self.target_dir:
+				is_executed = True
+				super().__call__(project, subject)
+
+		if not is_executed:
+			git_folder = project.temp_folder / self.target_dir
+			with git_folder:
+				super().__call__(project, subject)
 
 	def git_clone(self):
 		"""
@@ -65,9 +74,7 @@ class GitChecker(Checker):
 		cmd_args = ['git', 'clone', self.git_url]
 		if target_dir:
 			cmd_args.append(target_dir)
-		cmd = bash(cmd_args,
-					stdout=self.stdout,
-					stderr=self.stderr)
+		cmd = bash(cmd_args, capture_output=False)
 
 	def clean(self, project):
 		"""
