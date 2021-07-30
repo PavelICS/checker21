@@ -185,7 +185,7 @@ def call_command(command_name: str, *args, program_name=None, **options):
 def get_possible_command_matches(command_name: str, commands: Iterable[str]) -> List[str]:
     possible_matches = [command for command in commands if command.startswith(command_name)]
     close_matches = [x for x in get_close_matches(command_name, commands) if x not in possible_matches]
-    return possible_matches + cast(close_matches, List[str])
+    return possible_matches + cast(List[str], close_matches)
 
 
 def get_program_name(path: str) -> str:

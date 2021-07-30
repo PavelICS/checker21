@@ -21,13 +21,18 @@ class Command(ProjectCommand):
 		self.stdout.write(self.style.INFO(f"Start testing {project.verbose_name}"))
 
 		check_name = options.get('checker_name') or 'all'
+		started_checkers_count = 0
 		for subject in project.get_subjects():
 			subject_class_name = str(subject.__class__).split('.')[-1].split("'")[0]
 			self.stdout.write(f'Subject: {subject_class_name}')
 			for checker in subject.get_checkers():
 				if check_name == 'all' or check_name == checker.name:
+					started_checkers_count += 1
 					self.run_checker(checker, project, subject)
 			self.stdout.write(self.style.INFO(BLANK_LINE))
+
+		if started_checkers_count == 0:
+			self.stderr.write(f"Checker `{check_name}` is not found!")
 
 	def run_checker(self, checker, project, subject):
 		self.print_checker_name(checker)

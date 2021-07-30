@@ -364,6 +364,7 @@ class ProjectCommand(BaseCommand):
 		parser.add_argument('-p', '--path', help='Path to the project, e.g. "/home/delyn/libft"', default='.')
 
 	def handle(self, *args, **options) -> None:
+		project_cls = None
 		project_name = options.pop('project', None)
 
 		if project_name:
@@ -378,15 +379,15 @@ class ProjectCommand(BaseCommand):
 			project_name = standard_project_name
 			project_module.load()
 			project_cls = app.get_project(project_name)
-			if project_cls is None:
-				self.stderr.write(f'Project module "{project_name}" has no `Project` class!')
-				return
 
 		project = None
 		project_path = CurrentPath(options.get('path')).resolve()
 		if project_path.exists():
-			temp_folder = self._resolve_project_temp_path()
-			project = Project(project_path, temp_folder)
+			if project_cls is None:
+				self.stderr.write(f'Project module "{project_name}" has no `Project` class!')
+				return
+			temp_folder = self._resolve_project_temp_path(project_path)
+			project = project_cls(project_path, temp_folder)
 		elif self.program_name:
 			self.stderr.write(f'Project path "{project_path}" does not exist!')
 			return
@@ -412,7 +413,7 @@ class ProjectCommand(BaseCommand):
 		"""
 		pass
 
-	def _resolve_project_temp_path(self) -> CurrentPath:
+	def _resolve_project_temp_path(self, project_path) -> CurrentPath:
 		"""
 			Validates and returns project_temp_path
 			Depends on ``settings.PROJECT_TEMP_FOLDER``
@@ -424,7 +425,7 @@ class ProjectCommand(BaseCommand):
 		if '/' in temp_folder:
 			raise ImproperlyConfigured("The PROJECT_TEMP_FOLDER should contain only one level folder")
 
-		temp_path = CurrentPath(temp_folder).resolve()
+		temp_path = (project_path / temp_folder).resolve()
 		if not temp_path.exists():
 			temp_path.mkdir()
 		return temp_path
