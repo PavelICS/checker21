@@ -1,6 +1,7 @@
 from checker21.management.base import BaseCommand
 from checker21.application import app
 
+
 class Command(BaseCommand):
 	help = 'Lists all available projects'
 
@@ -12,14 +13,14 @@ class Command(BaseCommand):
 		"""Prints the list of all available projects."""
 
 		if verbosity == 0:
-			for project_name in sorted(app.get_projects()):
+			for project_name in sorted(app.get_project_modules()):
 				self.stdout.write(self.format_project_name(project_name))
 
 		else:
 			self.stdout.write("")
 			self.stdout.write("Available projects:")
 			self.stdout.write("")
-			for project_name in sorted(app.get_projects()):
+			for project_name in sorted(app.get_project_modules()):
 				self.stdout.write(f"    {self.format_project_name(project_name)}")
 			self.stdout.write("")
 

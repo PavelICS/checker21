@@ -6,6 +6,8 @@ from checker21.application import app
 class LibftSubject(Subject):
 	check_norminette = True
 
+	program_name = "libft.a"
+
 	allowed_files = (
 		"*.c",
 		"libft.h",

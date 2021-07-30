@@ -1,6 +1,6 @@
 import importlib
 
-from checker21.core.exceptions import ImproperlyConfigured
+from checker21.conf.exceptions import ImproperlyConfigured
 from checker21.utils.functional import LazyObject, empty
 
 from . import default_settings, environment
@@ -81,12 +81,19 @@ class Settings:
 		if self.SETTINGS_MODULE:
 			mod = importlib.import_module(self.SETTINGS_MODULE)
 
+			str_settings = {
+				'PROJECT_TEMP_FOLDER',
+			}
 			tuple_settings = (
 
 			)
 			for setting in dir(mod):
 				if setting.isupper():
 					setting_value = getattr(mod, setting)
+
+					if (setting in str_settings and
+							not isinstance(setting_value, str)):
+						raise ImproperlyConfigured(f'The {setting} setting must be a str.')
 
 					if (setting in tuple_settings and
 							not isinstance(setting_value, (list, tuple))):
@@ -133,5 +140,6 @@ class UserSettingsHolder:
 
 	def __repr__(self):
 		return f'<{self.__class__.__name__}>'
+
 
 settings = LazySettings()

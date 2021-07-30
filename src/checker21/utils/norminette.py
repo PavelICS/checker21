@@ -1,3 +1,5 @@
+from typing import Optional, Union, List, Dict, TypedDict
+
 from checker21.utils.bash import bash
 
 
@@ -11,8 +13,17 @@ class NorminetteCheckStatus:
     NOT_VALID   = "not valid"
 
 
-def get_norminette_version():
-    cmd = bash(["norminette", "-v"], echo=False)
+class NorminetteFileCheckResult(TypedDict, total=False):
+    status: str
+    line: str
+    errors: List[str]
+
+
+def get_norminette_version() -> Optional[str]:
+    try:
+        cmd = bash(["norminette", "-v"], echo=False)
+    except FileNotFoundError:
+        return None
     if cmd.stderr:
         return None
     output = cmd.stdout.strip().decode()
@@ -23,7 +34,7 @@ def get_norminette_version():
     return version
 
 
-def run_norminette(files=None):
+def run_norminette(files: Optional[Union[List[str], str]] = None) -> Dict[str, NorminetteFileCheckResult]:
     if files:
         if isinstance(files, str):
             files = [files]
@@ -36,11 +47,11 @@ def run_norminette(files=None):
     return parse_norminette_output(output)
 
 
-def parse_norminette_output(output):
+def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]:
     result = {}
 
     filename = None
-    active_record = None
+    active_record: Optional[NorminetteFileCheckResult] = None
     for line in output.split("\n"):
         if line.endswith("OK!"):
             filename = line.rsplit(':', 1)[0]

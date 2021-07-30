@@ -2,15 +2,18 @@ import os
 import sys
 from io import TextIOBase
 from argparse import ArgumentParser, HelpFormatter
-from pathlib import Path
+from typing import Optional
 
 import checker21
-from checker21.conf import environment
-from checker21.utils.colorize.style import NO_STYLE
+from checker21.conf import settings, environment
+from checker21.conf.exceptions import ImproperlyConfigured
+from checker21.core import Project
+from checker21.projects import get_project_name
+from checker21.utils.files import CurrentPath
 from checker21.utils.colorize import NO_COLOR_PALETTE, get_color_style
+from checker21.utils.colorize.style import NO_STYLE
 
 from .errors import CommandError, SystemCheckError
-from ..projects import get_project_name
 
 
 class CommandParser(ArgumentParser):
@@ -121,19 +124,19 @@ class BaseCommand:
 	the command_name-parsing and -execution behavior, the normal flow works
 	as follows:
 	1. ``manage.py`` loads the command class
-	   and calls its ``run_from_argv()`` method.
+		and calls its ``run_from_argv()`` method.
 	2. The ``run_from_argv()`` method calls ``create_parser()`` to get
-	   an ``ArgumentParser`` for the arguments, parses them, performs
-	   any environment changes requested by options like
-	   ``pythonpath``, and then calls the ``execute()`` method,
-	   passing the parsed arguments.
+		an ``ArgumentParser`` for the arguments, parses them, performs
+		any environment changes requested by options like
+		``pythonpath``, and then calls the ``execute()`` method,
+		passing the parsed arguments.
 	3. The ``execute()`` method attempts to carry out the command_name by
-	   calling the ``handle()`` method with the parsed arguments; any
-	   output produced by ``handle()`` will be printed to standard
-	   output.
+		calling the ``handle()`` method with the parsed arguments; any
+		output produced by ``handle()`` will be printed to standard
+		output.
 	4. If ``handle()`` or ``execute()`` raised any exception (e.g.
-	   ``CommandError``), ``run_from_argv()`` will  instead print an error
-	   message to ``stderr``.
+		``CommandError``), ``run_from_argv()`` will  instead print an error
+		message to ``stderr``.
 	Thus, the ``handle()`` method is typically the starting point for
 	subclasses; many built-in commands and command_name types either place
 	all of their logic in ``handle()``, or perform some additional
@@ -343,18 +346,15 @@ class ProjectCommand(BaseCommand):
 	Rather than implementing ``handle()``, subclasses must implement
 	``handle_project()``, which will be called once for each label.
 	"""
-
+	project_required: bool
 	project_required = True
-
-	# will be set by `handle()` depending on the argument `path`
-	project_path = None
 
 	def create_parser(self, program_name, command, **kwargs):
 		if self.project_required:
 			self.missing_args_message = "Enter a project name."
 		return super().create_parser(program_name, command, **kwargs)
 
-	def add_arguments(self, parser):
+	def add_arguments(self, parser) -> None:
 		options = {
 			'help':     'A project for which the command will be executed.',
 		}
@@ -363,39 +363,68 @@ class ProjectCommand(BaseCommand):
 		parser.add_argument('project', **options)
 		parser.add_argument('-p', '--path', help='Path to the project, e.g. "/home/delyn/libft"', default='.')
 
-	def handle(self, *args, **options):
+	def handle(self, *args, **options) -> None:
 		project_name = options.pop('project', None)
 
 		if project_name:
 			from checker21.application import app
 			try:
 				standard_project_name = get_project_name(project_name)
-				project = app.get_project(standard_project_name)
+				project_module = app.get_project_module(standard_project_name)
 			except KeyError:
 				self.stderr.write(f'Project "{project_name}" is not found!')
 				return
-			else:
-				project_name = standard_project_name
-				project.load()
 
-		self.project_path = Path(options.get('path')).resolve()
-		if self.project_path.exists():
-			self.chdir_to_project_dir()
+			project_name = standard_project_name
+			project_module.load()
+			project_cls = app.get_project(project_name)
+			if project_cls is None:
+				self.stderr.write(f'Project module "{project_name}" has no `Project` class!')
+				return
+
+		project = None
+		project_path = CurrentPath(options.get('path')).resolve()
+		if project_path.exists():
+			temp_folder = self._resolve_project_temp_path()
+			project = Project(project_path, temp_folder)
 		elif self.program_name:
-			self.stderr.write(f'Project path "{self.project_path}" does not exist!')
+			self.stderr.write(f'Project path "{project_path}" does not exist!')
 			return
 
-		self.handle_project(project_name, **options)
+		if project is not None:
+			with project.path:
+				self.handle_project(project, **options)
+		else:
+			self.handle_project_not_found(project_name, **options)
 
-	def handle_project(self, project, **options):
+	def handle_project(self, project: Project, **options) -> None:
 		"""
-		Perform the command's actions for ``project``, which will be the
-		string as given on the command line validated as existing project.
+		Perform the command's actions for ``project``, which will be
+		the Project instance parsed from the command line.
+		The method ``handle_project()`` is run in the project directory.
 		"""
 		raise NotImplementedError('subclasses of ProjectCommand must provide a handle_project() method')
 
-	def chdir_to_project_dir(self):
+	def handle_project_not_found(self, project_name: Optional[str], **options) -> None:
 		"""
-		Changes current directory to the project root
+		Perform the command's actions for ``project``, which will be the
+		string as given on the command line validated as not existing project.
 		"""
-		os.chdir(str(self.project_path))
+		pass
+
+	def _resolve_project_temp_path(self) -> CurrentPath:
+		"""
+			Validates and returns project_temp_path
+			Depends on ``settings.PROJECT_TEMP_FOLDER``
+		"""
+		temp_folder: str = settings.PROJECT_TEMP_FOLDER
+		if temp_folder.startswith("/"):
+			raise ImproperlyConfigured("The abstract path for the PROJECT_TEMP_FOLDER currently is not supported!")
+		temp_folder = temp_folder.replace('./', '').strip('/')
+		if '/' in temp_folder:
+			raise ImproperlyConfigured("The PROJECT_TEMP_FOLDER should contain only one level folder")
+
+		temp_path = CurrentPath(temp_folder).resolve()
+		if not temp_path.exists():
+			temp_path.mkdir()
+		return temp_path

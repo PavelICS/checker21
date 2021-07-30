@@ -15,12 +15,13 @@ except (ImportError, OSError):
 else:
 	HAS_COLORAMA = True
 
-def supports_color():
+
+def supports_color() -> bool:
 	"""
 	Return True if the running system's terminal supports color,
 	and False otherwise.
 	"""
-	def vt_codes_enabled_in_windows_registry():
+	def vt_codes_enabled_in_windows_registry() -> bool:
 		"""
 		Check the Windows Registry to see if VT code handling has been enabled
 		by default, see https://superuser.com/a/1300251/447564.
@@ -53,7 +54,8 @@ def supports_color():
 		vt_codes_enabled_in_windows_registry()
 	)
 
-def get_color_style(colors='', force_color=False):
+
+def get_color_style(colors: str = '', force_color: bool = False):
 	"""
 	Return a Style object from the color scheme.
 	"""

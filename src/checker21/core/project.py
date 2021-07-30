@@ -6,6 +6,21 @@ from importlib import import_module
 from checker21.conf import settings
 
 
+class Project:
+	name = ''
+	verbose_name = ''
+	description = ''
+
+	_module = None
+
+	def __init__(self, path, temp_folder):
+		self.path = path
+		self.temp_folder = temp_folder
+
+	def get_subjects(self):
+		from checker21.application import app
+		return app.get_subjects(self._module.name)
+
 
 def find_projects(target_dir):
 	"""
@@ -32,21 +47,23 @@ def get_projects():
 		module = import_module(str(settings.INTERNAL_PROJECTS_REPOSITORY))
 		module_name = module.__name__.split('.')[0]
 		projects = {
-			name: Project(name, module_name, module)
+			name: ProjectModule(name, module_name, module)
 			for name in find_projects(module.__path__)
 		}
 
 	if settings.EXTRA_PROJECTS_MODULE:
 		extra_module = import_module(str(settings.EXTRA_PROJECTS_MODULE))
 		projects.update({
-			name: Project(name, extra_module.__name__, extra_module)
+			name: ProjectModule(name, extra_module.__name__, extra_module)
 			for name in find_projects(extra_module.__path__)
 		})
 
 	return projects
 
 
-class Project:
+class ProjectModule:
+	__slots__ = 'name', 'pkg_name', 'pkg', '_module'
+
 	def __init__(self, name, pkg_name, pkg):
 		self.name = name
 		self.pkg_name = pkg_name
@@ -55,7 +72,11 @@ class Project:
 
 	def load(self):
 		if self._module is None:
-			self._module = import_module(f"{self.pkg.__name__}.{self.name}")
+			self._module = import_module(f"{self.pkg.__name__}.{self.name}.project")
+			from checker21.application import app
+			project_cls = app.get_project(self.name)
+			if project_cls:
+				project_cls._module = self
 		return self._module
 
 	def __str__(self):
@@ -63,4 +84,3 @@ class Project:
 
 	def __repr__(self):
 		return f"Project <{self.__str__()}>"
-

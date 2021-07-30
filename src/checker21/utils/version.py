@@ -1,5 +1,9 @@
+from typing import Optional, Tuple, NewType
 
-def get_version(version=None):
+Version = NewType('Version', Tuple[int, int, int, str])
+
+
+def get_version(version: Optional[Version] = None) -> str:
 	"""Return a PEP 440-compliant version number from VERSION."""
 	version = get_complete_version(version)
 
@@ -16,23 +20,24 @@ def get_version(version=None):
 
 	return main + sub
 
-def get_main_version(version=None):
+
+def get_main_version(version: Optional[Version] = None) -> str:
 	"""Return main version (X.Y[.Z]) from VERSION."""
 	version = get_complete_version(version)
 	parts = 2 if version[2] == 0 else 3
 	return '.'.join(str(x) for x in version[:parts])
 
-def get_complete_version(version=None):
+
+def get_complete_version(version: Optional[Version] = None) -> Version:
 	"""
-	Return a tuple of the django version. If version argument is non-empty,
+	Return a tuple of the checker21 version. If version argument is non-empty,
 	check for correctness of the tuple provided.
 	"""
 	if version is None:
 		# noinspection PyPep8Naming
-		from checker21 import VERSION as version
+		from checker21 import VERSION
+		return VERSION
 	else:
 		assert len(version) == 4
 		assert version[3] in ('alpha', 'beta', 'rc', 'final')
-
-	return version
-
+		return version

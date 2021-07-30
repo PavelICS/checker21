@@ -9,7 +9,7 @@ class ForbiddenFilesChecker(Checker):
 	verbose_name = "Forbidden files checker"
 	description = "Checks if there is any forbidden file in the repository"
 
-	def run(self, subject):
+	def run(self, project, subject):
 		forbidden_files_count = 0
 		pattern = compile_path_pattern("({})".format('|'.join(subject.allowed_files)))
 
@@ -28,7 +28,7 @@ class ForbiddenFunctionsChecker(Checker):
 	verbose_name = "Forbidden functions checker"
 	description = "Checks if the project uses a forbidden function"
 
-	def run(self, subject):
+	def run(self, project, subject):
 		self.check_executable(subject)
 		self.check_source_files(subject)
 
@@ -59,4 +59,3 @@ class ForbiddenFunctionsChecker(Checker):
 
 	def check_source_files(self, subject):
 		pass  # TODO check source files for forbidden functions
-

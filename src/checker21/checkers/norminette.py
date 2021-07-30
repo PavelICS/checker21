@@ -7,9 +7,9 @@ __all__ = ('NorminetteChecker',)
 class NorminetteChecker(Checker):
 	name = 'norminette'
 	verbose_name = 'Norminette'
-	description = 'Runs installed norminette to check files matching Norm'
+	description = 'Runs installed norminette to check for files matching Norm'
 
-	def run(self, subject):
+	def run(self, project, subject):
 		version = get_norminette_version()
 		if version is None:
 			self.stdout.write(self.style.ERROR("Norminette is not found!"))

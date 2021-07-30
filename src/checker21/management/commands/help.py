@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import checker21
 from checker21.conf import environment, settings
-from checker21.core.exceptions import ImproperlyConfigured
+from checker21.conf.exceptions import ImproperlyConfigured
 from checker21.management import get_commands, fetch_command, CommandError, get_possible_command_matches
 from checker21.management.base import BaseCommand
 
@@ -15,10 +15,10 @@ class Command(BaseCommand):
 
 	def add_arguments(self, parser):
 		parser.add_argument('command',
-		                    help='Shows help on a specific command.',
-		                    metavar='command',
-		                    nargs = '?',
-		                    default = '',
+			help='Shows help on a specific command.',
+			metavar='command',
+			nargs = '?',
+			default = '',
 		)
 
 	def handle(self, *args, **options):

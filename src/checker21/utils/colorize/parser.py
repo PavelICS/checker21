@@ -1,8 +1,11 @@
+from typing import Type, Union, Dict, Any
+
 from .color import color_names, opt_dict
-from .palette import  PALETTES, NO_COLOR_PALETTE, DEFAULT_PALETTE
+from .palette import Palette, PALETTES, NO_COLOR_PALETTE, DEFAULT_PALETTE
 from .style import Style
 
-def parse_color_setting(config_string):
+
+def parse_color_setting(config_string: str) -> Union[Palette, Type[Palette]]:
 	"""Parse a config_string to produce the system palette
 	The general form of a palette definition is:
 		"palette;role=fg;role=fg/bg;role=fg,option,option;role=fg/bg,option,option"
@@ -49,7 +52,7 @@ def parse_color_setting(config_string):
 				continue
 
 			# Process a palette defining string
-			definition = {}
+			definition: Dict[str, Any] = {}
 
 			styles = instructions.split(',')
 			styles.reverse()
@@ -68,13 +71,11 @@ def parse_color_setting(config_string):
 				definition['noreset'] = True
 			definition['opts'] = tuple(s for s in styles if s in opt_dict) or None
 
-
 			if definition:
 				changed_styles += 1
 				setattr(palette, role, Style(**definition))
 
 	# If there are no colors specified, return the empty palette.
 	if changed_styles == 0:
-		return None
+		return no_color_palette
 	return palette
-

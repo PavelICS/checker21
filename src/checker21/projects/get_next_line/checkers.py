@@ -15,7 +15,7 @@ class GnlWarMachineChecker(GitChecker):
 	git_url = 'https://github.com/PavelICS/gnl-war-machine-v2019'
 	target_dir = 'gnl-war-machine-v2021'
 
-	def run(self, subject):
+	def run(self, project, subject):
 		os.chdir(self.target_dir)
 		self.git_config()
 		cmd = bash(['/bin/bash', 'grademe.sh'], capture_output=False)
@@ -40,7 +40,7 @@ class GnlKillerChecker(GitChecker):
 	git_url = 'https://github.com/DontBreakAlex/gnlkiller'
 	target_dir = 'gnlkiller'
 
-	def run(self, subject):
+	def run(self, project, subject):
 		os.chdir(self.target_dir)
 		self.git_config()
 		bash(['/bin/bash', 'run.sh'], stdout=self.stdout, stderr=self.stderr)

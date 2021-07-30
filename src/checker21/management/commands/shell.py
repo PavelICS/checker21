@@ -105,6 +105,7 @@ class Command(BaseCommand):
 
 		available_shells = [options['interface']] if options['interface'] else self.shells
 
+		shell = None
 		for shell in available_shells:
 			try:
 				return getattr(self, shell)(options)

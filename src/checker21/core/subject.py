@@ -1,14 +1,14 @@
-from checker21.checkers import *
-
 __all__ = ('Subject',)
 
+from checker21.checkers import *
 from checker21.utils.files import find_files
-
 from checker21.utils.git import git_list_files
 
 
 class Subject:
 	bonus = False
+	check_norminette = False
+	program_name = ''
 
 	allowed_files = []
 	allowed_functions = []
@@ -18,8 +18,6 @@ class Subject:
 
 	actions = []
 	checkers = []
-
-	check_norminette = False
 
 	_general_checkers = None
 	_source_files = None
@@ -57,4 +55,3 @@ class Subject:
 			files = list(find_files('.'))
 		self._all_files = files
 		return self._all_files
-

@@ -1,20 +1,23 @@
 import functools
-import os, sys
+import os
+import sys
 from argparse import _StoreConstAction, _AppendConstAction, _SubParsersAction, _CountAction
 from importlib import import_module
 from pathlib import Path
 import pkgutil
 from difflib import get_close_matches
+from typing import Union, List, Optional, Dict, Iterable, cast
+from os import PathLike
 
 import checker21
 from checker21.conf import settings
 
 from .base import BaseCommand, CommandParser, handle_default_options
 from .errors import CommandError
-from ..core.exceptions import ImproperlyConfigured
+from checker21.conf.exceptions import ImproperlyConfigured
 
 
-def find_commands(commands_dir):
+def find_commands(commands_dir: Union[str, PathLike]):
     """
     Given a path to a management directory, return a list of all the command_name
     names that are available.
@@ -27,7 +30,7 @@ def find_commands(commands_dir):
     ]
 
 
-def load_command_class(module_name, name):
+def load_command_class(module_name: str, name: str):
     """
     Given a command name and a module name, return the Command
     class instance. Allow all errors raised by the import process
@@ -38,8 +41,9 @@ def load_command_class(module_name, name):
     module = import_module(f'{module_name}.{name}')
     return module.Command()
 
+
 @functools.lru_cache(maxsize=None)
-def get_commands():
+def get_commands() -> Dict[str, str]:
     """
     Return a dictionary mapping command names to their callback module.
     Core commands are always included. If a settings module has been
@@ -69,7 +73,7 @@ def get_commands():
     return commands
 
 
-def fetch_command(command_name):
+def fetch_command(command_name: str):
     """
     Fetch the given command_name,
     throwing CommandError if it can't be found.
@@ -86,7 +90,8 @@ def fetch_command(command_name):
     return _class
 
 
-def call_command(command_name, *args, program_name=None, **options):
+# noinspection PyProtectedMember
+def call_command(command_name: str, *args, program_name=None, **options):
     """
     Call the given command, with the given options and args/kwargs.
     This is the primary API you should use for calling specific commands.
@@ -125,6 +130,7 @@ def call_command(command_name, *args, program_name=None, **options):
         else:
             parse_args.append(str(arg))
 
+    # noinspection PyShadowingNames,PyProtectedMember
     def get_actions(parser):
         # Parser actions and actions from sub-parser choices.
         for opt in parser._actions:
@@ -176,13 +182,13 @@ def call_command(command_name, *args, program_name=None, **options):
     return command.execute(*args, **defaults)
 
 
-def get_possible_command_matches(command_name, commands):
+def get_possible_command_matches(command_name: str, commands: Iterable[str]) -> List[str]:
     possible_matches = [command for command in commands if command.startswith(command_name)]
     close_matches = [x for x in get_close_matches(command_name, commands) if x not in possible_matches]
-    return possible_matches + close_matches
+    return possible_matches + cast(close_matches, List[str])
 
 
-def get_program_name(path):
+def get_program_name(path: str) -> str:
     program_name = os.path.basename(path)
     if program_name == '__main__.py':
         program_name = 'python -m checker21'
@@ -193,7 +199,11 @@ class ManagementUtility:
     """
     Encapsulate the logic of the manage.py utilities.
     """
-    def __init__(self, argv=None):
+    argv: List[str]
+    program_name: str
+    settings_exception: Optional[Exception]
+
+    def __init__(self, argv: Optional[List[str]] = None):
         self.argv = argv or sys.argv[:]
         self.program_name = get_program_name(self.argv[0])
         self.settings_exception = None
