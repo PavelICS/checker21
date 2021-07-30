@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Dict, TypedDict
+from typing import Optional, Union, List, Dict
 
 from checker21.utils.bash import bash
 
@@ -13,10 +13,16 @@ class NorminetteCheckStatus:
     NOT_VALID   = "not valid"
 
 
-class NorminetteFileCheckResult(TypedDict, total=False):
-    status: str
-    line: str
-    errors: List[str]
+try:
+    from typing import TypedDict
+
+    class NorminetteFileCheckResult(TypedDict, total=False):
+        status: str
+        line: str
+        errors: List[str]
+except ImportError:
+    TypedDict = None
+    NorminetteFileCheckResult = Dict
 
 
 def get_norminette_version() -> Optional[str]:
