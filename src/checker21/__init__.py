@@ -21,6 +21,7 @@ CHECKER21_FILE_CONTENT = b"""
 # Setting PATH for Python 3.7
 HOME_DIR=`dirname ~/any`
 PATH="${HOME_DIR}/Library/Python/3.7/bin:${PATH}"
+export PATH
 """
 
 
