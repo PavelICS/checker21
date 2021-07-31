@@ -16,7 +16,7 @@ class NorminetteChecker(Checker):
 			return
 		self.stdout.write(self.style.INFO(f"Using norminette {version}"))
 
-		files = [file for file in project.list_files() if file.endswith(".c") or file.endswith(".h")]
+		files = [file for file in project.list_files() if file.suffix == ".c" or file.suffix == ".h"]
 		result = run_norminette(files)
 		for file, info in result.items():
 			status = info["status"]
