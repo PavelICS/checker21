@@ -1,3 +1,5 @@
+from os import PathLike
+from pathlib import Path
 from typing import Optional, Union, List, Dict
 
 from checker21.utils.bash import bash
@@ -41,9 +43,11 @@ def get_norminette_version() -> Optional[str]:
     return version
 
 
-def run_norminette(files: Optional[Union[List[str], str]] = None) -> Dict[str, NorminetteFileCheckResult]:
+def run_norminette(
+        files: Optional[Union[List[str], str, List[Path], Path]] = None
+) -> Dict[str, NorminetteFileCheckResult]:
     if files:
-        if isinstance(files, str):
+        if isinstance(files, (str, PathLike)):
             files = [files]
         cmd = bash(["norminette", *files], echo=False)
     else:
