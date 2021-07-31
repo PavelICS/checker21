@@ -4,6 +4,8 @@ from pathlib import Path
 from importlib import import_module
 
 from checker21.conf import settings
+from checker21.utils.files import find_files
+from checker21.utils.git import git_list_files
 
 
 class Project:
@@ -12,6 +14,7 @@ class Project:
 	description = ''
 
 	_module = None
+	_all_files = None
 
 	def __init__(self, path, temp_folder):
 		self.path = path
@@ -20,6 +23,18 @@ class Project:
 	def get_subjects(self):
 		from checker21.application import app
 		return app.get_subjects(self._module.name)
+
+	def list_files(self):
+		if self._all_files is not None:
+			return self._all_files
+		# check only committed files
+		files = git_list_files()
+		if files is None:
+			# if there is no git, check all files
+			# TODO skip check external files, like downloaded from git or compiled by make files
+			files = list(find_files('.'))
+		self._all_files = files
+		return self._all_files
 
 
 def find_projects(target_dir):

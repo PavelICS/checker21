@@ -1,8 +1,6 @@
 __all__ = ('Subject',)
 
 from checker21.checkers import *
-from checker21.utils.files import find_files
-from checker21.utils.git import git_list_files
 
 
 class Subject:
@@ -21,7 +19,6 @@ class Subject:
 
 	_general_checkers = None
 	_source_files = None
-	_all_files = None
 
 	def __init__(self):
 		checkers = []
@@ -43,15 +40,3 @@ class Subject:
 
 		# self._source_files = TODO find source files
 		return self._source_files
-
-	def list_files(self):
-		if self._all_files is not None:
-			return self._all_files
-		# check only committed files
-		files = git_list_files()
-		if files is None:
-			# if there is no git, check all files
-			# TODO skip check external files, like downloaded from git or compiled by make files
-			files = list(find_files('.'))
-		self._all_files = files
-		return self._all_files

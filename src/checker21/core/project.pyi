@@ -11,15 +11,16 @@ class Project:
 	verbose_name: str
 	description: str
 
-	_module: Optional[ProjectModule]
-
 	path: CurrentPath
 	temp_folder: CurrentPath
 
+	_module: Optional[ProjectModule]
+	_all_files: Optional[List[Union[str, PathLike]]]
+
 	def __init__(self, path: CurrentPath, temp_folder: CurrentPath) -> None: ...
 
-	def get_subjects(self) -> List[Subject]:
-		pass
+	def get_subjects(self) -> List[Subject]: ...
+	def list_files(self) -> List[Union[str, PathLike]]: ...
 
 
 def find_projects(target_dir: Union[List[PathLike], PathLike, str]) -> List[str]: ...

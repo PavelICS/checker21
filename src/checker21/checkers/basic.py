@@ -13,7 +13,7 @@ class ForbiddenFilesChecker(Checker):
 		forbidden_files_count = 0
 		pattern = compile_path_pattern("({})".format('|'.join(subject.allowed_files)))
 
-		for file in subject.list_files():
+		for file in project.list_files():
 			if not pattern.match(str(file)):
 				forbidden_files_count += 1
 				self.stdout.write(self.style.ERROR(str(file)))

@@ -18,9 +18,7 @@ class Subject:
 
 	checkers: Iterable[Checker]
 	_general_checkers: Optional[Iterable[Checker]]
-	_all_files: Optional[List[Union[str, PathLike]]]
 
 	def __init__(self) -> None: ...
 
 	def get_checkers(self) -> Generator[Checker, None, None]: ...
-	def list_files(self) -> List[Union[str, PathLike]]: ...
