@@ -1,6 +1,6 @@
 from checker21.utils.version import get_version, Version
 
-VERSION = Version((0, 0, 3, 'alpha'))
+VERSION = Version((0, 1, 0, 'alpha'))
 
 __version__ = get_version(VERSION)
 
