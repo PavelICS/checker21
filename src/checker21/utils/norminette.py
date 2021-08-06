@@ -63,13 +63,22 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
 
     filename = None
     active_record: Optional[NorminetteFileCheckResult] = None
+    last_warning = None
 
     def add_error(error):
         if not active_record or "errors" not in active_record:
             raise NorminetteException(f"Couldn't add errors to `{filename}`")
         active_record["errors"].append(error)
 
-    last_warning = None
+    def add_record(record):
+        nonlocal last_warning
+
+        result[filename] = record
+        if last_warning:
+            active_record["warnings"] = [last_warning]
+            last_warning = None
+
+
     for line in output.split("\n"):
         if line.endswith("OK!"):
             filename = line.rsplit(':', 1)[0]
@@ -77,10 +86,7 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
                 "status": NorminetteCheckStatus.OK,
                 "line": line,
             }
-            result[filename] = active_record
-            if last_warning:
-                active_record["warnings"] = [last_warning]
-                last_warning = None
+            add_record(active_record)
             continue
 
         if line.endswith("Error!"):
@@ -90,7 +96,7 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
                 "line": line,
                 "errors": [],
             }
-            result[filename] = active_record
+            add_record(active_record)
             continue
 
         if line.startswith("Error:"):
