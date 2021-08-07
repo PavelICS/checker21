@@ -14,7 +14,7 @@ class PftChecker(GitChecker):
 	target_dir = 'pft'
 
 	def run(self, project, subject):
-		self.git_config(subject)
+		self.git_config(project)
 		bash(['./reset-to-default-enabled-tests'], capture_output=False)
 		if subject.bonus:
 			bash(['./disable-test'], capture_output=False)
@@ -34,9 +34,9 @@ class PftChecker(GitChecker):
 		bash(['make'], capture_output=False)
 		bash(['./test'], capture_output=False)
 
-	def git_config(self, subject):
+	def git_config(self, project):
 		def callback(data):
-			makefile_count = sum([1 for file in subject.list_files() if file.endswith("Makefile")])
+			makefile_count = sum([1 for file in project.list_files() if file.name == "Makefile"])
 			if makefile_count > 1:
 				# Activate separate libft
 				data = data.replace(b'USE_SEPARATE_LIBFT=0', b'USE_SEPARATE_LIBFT=1')
