@@ -31,8 +31,8 @@ class Project:
 		files = git_list_files()
 		if files is None:
 			# if there is no git, check all files
-			# TODO skip check external files, like downloaded from git or compiled by make files
 			files = list(find_files('.'))
+			files = [file for file in files if file._parts[0] != settings.PROJECT_TEMP_FOLDER]
 		self._all_files = files
 		return self._all_files
 
