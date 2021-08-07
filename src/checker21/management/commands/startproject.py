@@ -20,7 +20,6 @@ class Command(BaseCommand):
 		)
 
 	def handle(self, *args, **options):
-		os.chdir("/Users/delyn/CLionProjects/testing_projects/test0")
 		target = Path("settings.py")
 		if target.exists():
 			self.stderr.write("Another settings file already exists!\n"
