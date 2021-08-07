@@ -32,6 +32,7 @@ class Project:
 		if files is None:
 			# if there is no git, check all files
 			files = list(find_files('.'))
+			# Skip checking forbidden files for files in temp project folder
 			files = [file for file in files if file._parts[0] != settings.PROJECT_TEMP_FOLDER]
 		self._all_files = files
 		return self._all_files
