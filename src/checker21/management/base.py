@@ -12,6 +12,7 @@ from checker21.projects import get_project_name
 from checker21.utils.files import CurrentPath
 from checker21.utils.colorize import NO_COLOR_PALETTE, get_color_style
 from checker21.utils.colorize.style import NO_STYLE
+from checker21.utils.pip import check_version
 
 from .errors import CommandError, SystemCheckError
 
@@ -292,6 +293,7 @@ class BaseCommand:
 		elif options['no_color']:
 			self.set_style(NO_COLOR_PALETTE)
 
+		# self._check_version()
 		output = self.handle(*args, **options)
 		return output
 
@@ -305,6 +307,11 @@ class BaseCommand:
 		this method.
 		"""
 		raise NotImplementedError('subclasses of BaseCommand must provide a handle() method')
+
+	def _check_version(self):
+		new_version = check_version('checker21')
+		if new_version:
+			self.stdout.write(self.style.WARNING(f"New version {new_version} of checker21 is available!"))
 
 
 class LabelCommand(BaseCommand):

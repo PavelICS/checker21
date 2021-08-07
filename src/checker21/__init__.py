@@ -2,7 +2,7 @@ from pathlib import Path
 
 from checker21.utils.version import get_version, Version
 
-VERSION = Version((0, 1, 5, 'alpha'))
+VERSION = Version((0, 1, 6, 'alpha'))
 
 __version__ = get_version(VERSION)
 
