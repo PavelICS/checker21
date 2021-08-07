@@ -32,10 +32,13 @@ class Application:
 		if instance is None:
 			return do_registration
 		do_registration(instance)
+		return instance
 
 	def _get_module_name(self, module: str) -> str:
 		if module.startswith(settings.INTERNAL_PROJECTS_REPOSITORY):
 			module = module[len(settings.INTERNAL_PROJECTS_REPOSITORY) + 1:]
+		elif settings.EXTRA_PROJECTS_MODULE and module.startswith(settings.EXTRA_PROJECTS_MODULE):
+			module = module[len(settings.EXTRA_PROJECTS_MODULE) + 1:]
 		return module.split(".", 1)[0]
 
 	def register_subject(self, subject: Type[Subject], *, module: Optional[str] = None) -> None:
