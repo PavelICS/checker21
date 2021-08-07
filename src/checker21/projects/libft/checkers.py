@@ -24,3 +24,27 @@ class LibftUnitTestChecker(GitChecker):
 			return data
 
 		update_file_with_backup('Makefile', callback)
+
+
+class LibftSplitChecker(GitChecker):
+	name = 'split'
+	verbose_name = 'Libft split'
+	description = 'Checks split function'
+
+	git_url = "https://github.com/Ysoroko/FT_SPLIT_TESTER"
+	target_dir = "libft-split-checker"
+
+	def run(self, project, subject):
+		self.git_config()
+		bash(["make"], capture_output=False)
+		self.stdout.write(self.style.WARNING(
+			"The 18 and 19 tests are testing for NULL string as input.\n"
+			"We think that it isn't required to check for NULL and segfault here is OK."
+		))
+
+	def git_config(self):
+		def update_file(data):
+			data = data.replace(b"../*.c", b"../../*.c")
+			return data
+
+		update_file_with_backup("Makefile", update_file)

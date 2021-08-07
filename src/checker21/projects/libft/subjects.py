@@ -23,4 +23,5 @@ class LibftSubject(Subject):
 
 	checkers = [
 		LibftUnitTestChecker(),
+		LibftSplitChecker(),
 	]
