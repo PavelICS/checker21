@@ -386,3 +386,17 @@ class SimpleLazyObject(LazyObject):
 			memo[id(self)] = result
 			return result
 		return copy.deepcopy(self._wrapped, memo)
+
+
+def cached_no_args(func):
+	func.cached_value = None
+
+	@wraps(func)
+	def wrapper():
+		value = func.cached_value
+		if value is not None:
+			return value
+		value = func()
+		func.cached_value = value
+		return value
+	return wrapper
