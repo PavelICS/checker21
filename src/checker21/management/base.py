@@ -1,8 +1,9 @@
 import os
 import sys
+from abc import ABC
 from io import TextIOBase
 from argparse import ArgumentParser, HelpFormatter
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import checker21
 from checker21.conf import settings, environment
@@ -166,8 +167,12 @@ class BaseCommand:
 	stealth_options = ()
 
 	def __init__(self, stdout=None, stderr=None, no_color=False, force_color=False):
-		self.stdout = OutputWrapper(stdout or sys.stdout)
-		self.stderr = OutputWrapper(stderr or sys.stderr)
+		self.stdout = stdout or sys.stdout
+		if not isinstance(self.stdout, OutputWrapper):
+			self.stdout = OutputWrapper(self.stdout)
+		self.stderr = stderr or sys.stderr
+		if not isinstance(self.stderr, OutputWrapper):
+			self.stderr = OutputWrapper(self.stderr)
 		if no_color and force_color:
 			raise CommandError("'no_color' and 'force_color' can't be used together.")
 		self.style = None
@@ -346,7 +351,41 @@ class LabelCommand(BaseCommand):
 		raise NotImplementedError('subclasses of LabelCommand must provide a handle_label() method')
 
 
-class ProjectCommand(BaseCommand):
+class AnonymousProjectCommand(BaseCommand):
+	"""
+	A management command that allows to initialize a project temp folder.
+	"""
+
+	def add_arguments(self, parser) -> None:
+		parser.add_argument('-p', '--path', help='Path to the project, e.g. "/home/delyn/libft"', default='.')
+
+	def _resolve_project_path(self, options: Dict) -> Optional[CurrentPath]:
+		project_path = CurrentPath(options.get('path')).resolve()
+		if project_path.exists():
+			return project_path
+		elif self.program_name:
+			self.stderr.write(f'Project path "{project_path}" does not exist!')
+		return None
+
+	def _resolve_project_temp_path(self, project_path: CurrentPath) -> CurrentPath:
+		"""
+			Validates and returns project_temp_path
+			Depends on ``settings.PROJECT_TEMP_FOLDER``
+		"""
+		temp_folder: str = settings.PROJECT_TEMP_FOLDER
+		if temp_folder.startswith("/"):
+			raise ImproperlyConfigured("The abstract path for the PROJECT_TEMP_FOLDER currently is not supported!")
+		temp_folder = temp_folder.replace('./', '').strip('/')
+		if '/' in temp_folder:
+			raise ImproperlyConfigured("The PROJECT_TEMP_FOLDER should contain only one level folder")
+
+		temp_path = (project_path / temp_folder).resolve()
+		if not temp_path.exists():
+			temp_path.mkdir()
+		return temp_path
+
+
+class ProjectCommand(AnonymousProjectCommand):
 	"""
 	A management command which takes one project name as
 	argument, and does something with it.
@@ -388,15 +427,14 @@ class ProjectCommand(BaseCommand):
 			project_cls = app.get_project(project_name)
 
 		project = None
-		project_path = CurrentPath(options.get('path')).resolve()
-		if project_path.exists():
+		project_path = self._resolve_project_path(options)
+		if project_path:
 			if project_cls is None:
 				self.stderr.write(f'Project module "{project_name}" has no `Project` class!')
 				return
 			temp_folder = self._resolve_project_temp_path(project_path)
 			project = project_cls(project_path, temp_folder)
 		elif self.program_name:
-			self.stderr.write(f'Project path "{project_path}" does not exist!')
 			return
 
 		if project is not None:
@@ -419,20 +457,3 @@ class ProjectCommand(BaseCommand):
 		string as given on the command line validated as not existing project.
 		"""
 		pass
-
-	def _resolve_project_temp_path(self, project_path) -> CurrentPath:
-		"""
-			Validates and returns project_temp_path
-			Depends on ``settings.PROJECT_TEMP_FOLDER``
-		"""
-		temp_folder: str = settings.PROJECT_TEMP_FOLDER
-		if temp_folder.startswith("/"):
-			raise ImproperlyConfigured("The abstract path for the PROJECT_TEMP_FOLDER currently is not supported!")
-		temp_folder = temp_folder.replace('./', '').strip('/')
-		if '/' in temp_folder:
-			raise ImproperlyConfigured("The PROJECT_TEMP_FOLDER should contain only one level folder")
-
-		temp_path = (project_path / temp_folder).resolve()
-		if not temp_path.exists():
-			temp_path.mkdir()
-		return temp_path

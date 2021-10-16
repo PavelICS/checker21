@@ -12,7 +12,14 @@ from os import PathLike
 import checker21
 from checker21.conf import settings
 
-from .base import BaseCommand, CommandParser, handle_default_options
+from .base import (
+	BaseCommand,
+	CommandParser,
+	handle_default_options,
+	LabelCommand,
+	AnonymousProjectCommand,
+	ProjectCommand,
+)
 from .errors import CommandError
 from checker21.conf.exceptions import ImproperlyConfigured
 
