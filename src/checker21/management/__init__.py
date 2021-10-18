@@ -12,7 +12,14 @@ from os import PathLike
 import checker21
 from checker21.conf import settings
 
-from .base import BaseCommand, CommandParser, handle_default_options
+from .base import (
+	BaseCommand,
+	CommandParser,
+	handle_default_options,
+	LabelCommand,
+	AnonymousProjectCommand,
+	ProjectCommand,
+)
 from .errors import CommandError
 from checker21.conf.exceptions import ImproperlyConfigured
 
@@ -25,7 +32,7 @@ def find_commands(commands_dir: Union[str, PathLike]):
 	command_dir = Path(commands_dir)
 	return [
 		name
-		for _, name, is_pkg in pkgutil.iter_modules([command_dir])
+		for _, name, is_pkg in pkgutil.iter_modules([str(command_dir)])
 		if not is_pkg and not name.startswith('_')
 	]
 
