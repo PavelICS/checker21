@@ -32,7 +32,7 @@ def find_commands(commands_dir: Union[str, PathLike]):
 	command_dir = Path(commands_dir)
 	return [
 		name
-		for _, name, is_pkg in pkgutil.iter_modules([command_dir])
+		for _, name, is_pkg in pkgutil.iter_modules([str(command_dir)])
 		if not is_pkg and not name.startswith('_')
 	]
 

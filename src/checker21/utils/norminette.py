@@ -150,8 +150,11 @@ class Norminette:
         output = cmd.stdout.strip().decode()
         return self.parse_output(output)
 
+    def get_project_files(self, project: Project) -> List[Path]:
+        return [file for file in project.list_files() if file.suffix == ".c" or file.suffix == ".h"]
+
     def check_project(self, project: Project) -> Dict[str, NorminetteFileCheckResult]:
-        files = [file for file in project.list_files() if file.suffix == ".c" or file.suffix == ".h"]
+        files = self.get_project_files(project)
         self.state.validate_cached_files(files)
         files = [file for file in files if self.state.is_file_changed(file)]
         if files:
@@ -197,6 +200,7 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
             last_warning = None
 
     for line in output.split("\n"):
+        line = line.strip()
         if line.endswith("OK!"):
             filename = line.rsplit(':', 1)[0]
             active_record = {
@@ -228,7 +232,7 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
             add_error(line)
             continue
 
-        if line.startswith("\t\x1b[31m"):
+        if line.startswith("\x1b[31m"):
             line = line.replace("\t\x1b[31m", '').replace("\x1b[0m'", '')
             add_error(line)
             continue
