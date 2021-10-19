@@ -4,6 +4,7 @@ from typing import Set, Dict, Callable, Any, List
 
 from checker21.core import Project
 from checker21.management import AnonymousProjectCommand
+from checker21.norminette.fix_machine import NorminetteFixMachine
 from checker21.utils.code_fixer import CodeFixer
 from checker21.utils.norminette import NorminetteCheckStatus, Norminette, NorminetteError
 
@@ -180,6 +181,8 @@ class Command(AnonymousProjectCommand):
 		total_fix_count = 0
 		total_errors = 0
 
+		fix_machine = NorminetteFixMachine(self.stdout, self.stderr, self.style)
+
 		self.stdout.write(self.style.INFO("Trying to fix cached errors..."))
 		result = self.norminette.state.result
 		for file, info in result.items():
@@ -189,7 +192,9 @@ class Command(AnonymousProjectCommand):
 				continue
 
 			errors_to_fix: List[NorminetteError] = []
+			norminette_errors_to_fix: List[NorminetteError] = []
 			has_empty_line_first = False
+			use_original_norminette = False
 			total_errors += len(info["errors"])
 			for error in info["errors"]:
 				_error = NorminetteError.parse(error)
@@ -203,8 +208,26 @@ class Command(AnonymousProjectCommand):
 						"SPACE_REPLACE_TAB",
 						"EMPTY_LINE_FUNCTION",
 						"SPACE_AFTER_KW",
+						"SPC_AFTER_OPERATOR",
+						"NO_SPC_BFR_OPR",
+						"TAB_INSTEAD_SPC",
+						"NO_SPC_AFR_PAR",
+						"TOO_MANY_TAB",
+						"TOO_FEW_TAB",
+						"SPC_BFR_OPERATOR",
 					}:
 						errors_to_fix.append(_error)
+					elif _error.code in {
+						"MISALIGNED_FUNC_DECL",
+					}:
+						errors_to_fix.append(_error)
+						use_original_norminette = True
+					elif _error.code in {
+						"PREPROC_START_LINE",
+						"PREPROC_BAD_INDENT",
+					}:
+						norminette_errors_to_fix.append(_error)
+						use_original_norminette = True
 					elif _error.code == "EMPTY_LINE_FILE_START":
 						has_empty_line_first = True
 						errors_to_fix.append(_error)
@@ -212,49 +235,80 @@ class Command(AnonymousProjectCommand):
 						if not has_empty_line_first:
 							errors_to_fix.append(_error)
 
-			try_fix_count += len(errors_to_fix)
-			if errors_to_fix:
-				path = Path(file)
-				if not path.exists():
-					continue
-				self.stdout.write(self.style.INFO(f'Trying to fix errors in {file}'))
-				code_fixer = CodeFixer(path)
+			_try_to_fix = len(errors_to_fix) + len(norminette_errors_to_fix)
+			if _try_to_fix == 0:
+				continue
 
+			path = Path(file)
+			if not path.exists():
+				continue
+			self.stdout.write(self.style.INFO(f'Trying to fix errors in {file}'))
+			fix_machine.load_file(path)
+
+			fixed_by_norminette_machine_count = 0
+			try_fix_count += _try_to_fix
+			if use_original_norminette:
+				fix_machine.run_with_norminette()
+				fixed_by_norminette_machine_count = fix_machine.fix_count
+
+			code_fixer = fix_machine.code_fixer
+			if errors_to_fix and fixed_by_norminette_machine_count == 0:
+				# fix errors by regexp only if there is no errors to fix by norminette machine
 				last_line = -1
 				for error in errors_to_fix:
-					self.stdout.write(f"Fixing {error.raw}")
 					line = error.line - 1
 					if line == last_line:
-						break  # stop processing if multiple errors in a line
+						continue  # skip errors processing if multiple errors in a line
 					pos = error.col - 1
 
-					if error.code == "EMPTY_LINE_FILE_START":
-						code_fixer.delete_file_leading_spaces()
-						break  # stop processing errors because the lines order is changed
-					elif error.code == "INVALID_HEADER":
-						if not has_empty_line_first:
-							code_fixer.insert_header(user, email)
-					elif error.code == "NO_ARGS_VOID":
-						code_fixer.insert_void_args(line)
-					elif error.code == "SPACE_BEFORE_FUNC":
-						code_fixer.reformat_function_declaration(line)
-					elif error.code == "CONSECUTIVE_SPC":
-						code_fixer.fix_multiple_spaces(line, pos)
-					elif error.code == "SPACE_REPLACE_TAB":
-						code_fixer.fix_space_replace_tab(line, pos)
-					elif error.code == "CONSECUTIVE_NEWLINES" or error.code == "EMPTY_LINE_FUNCTION":
-						code_fixer.fix_multiple_newlines(line)
-						break  # stop processing errors because the lines order is changed
-					elif error.code == "BRACE_SHOULD_EOL":
-						# it inserts a new line inside current line, so we can continue fixing errors
-						code_fixer.fix_brace_should_eol(line, pos)
-					elif error.code == "SPACE_AFTER_KW":
-						code_fixer.add_space_after_kw(line, pos)
+					if error.code in {
+						"MISALIGNED_FUNC_DECL",
+					}:
+						fix_machine.fix_norm_error(error)
+					else:
+						# TODO move logic to fix_machine
+						self.stdout.write(f"Fixing {error}")
+						if error.code == "EMPTY_LINE_FILE_START":
+							code_fixer.delete_file_leading_spaces()
+							break  # stop processing errors because the lines order is changed
+						elif error.code == "INVALID_HEADER":
+							if not has_empty_line_first:
+								code_fixer.insert_header(user, email)
+						elif error.code == "NO_ARGS_VOID":
+							code_fixer.insert_void_args(line)
+						elif error.code == "SPACE_BEFORE_FUNC":
+							code_fixer.reformat_function_declaration(line)
+						elif error.code == "CONSECUTIVE_SPC":
+							code_fixer.fix_multiple_spaces(line, pos)
+						elif error.code == "SPACE_REPLACE_TAB":
+							code_fixer.fix_space_replace_tab(line, pos)
+						elif error.code == "CONSECUTIVE_NEWLINES" or error.code == "EMPTY_LINE_FUNCTION":
+							code_fixer.fix_multiple_newlines(line)
+							break  # stop processing errors because the lines order is changed
+						elif error.code == "BRACE_SHOULD_EOL":
+							# it inserts a new line inside current line, so we can continue fixing errors
+							code_fixer.fix_brace_should_eol(line, pos)
+						elif error.code == "SPACE_AFTER_KW":
+							code_fixer.add_space_after_kw(line, pos)
+						elif error.code == "SPC_AFTER_OPERATOR":
+							code_fixer.add_space_after_operator(line, pos)
+						elif error.code == "SPC_BFR_OPERATOR":
+							code_fixer.add_space_before(line, pos)
+						elif error.code == "NO_SPC_BFR_OPR":
+							code_fixer.delete_spaces(line, pos)
+						elif error.code == "TAB_INSTEAD_SPC":
+							code_fixer.fix_tab_replace_space(line, pos)
+						elif error.code == "NO_SPC_AFR_PAR":
+							code_fixer.delete_spaces_after(line, pos)
+						elif error.code == "TOO_MANY_TAB":
+							code_fixer.fix_too_many_tab(line, pos)
+						elif error.code == "TOO_FEW_TAB":
+							code_fixer.add_tab(line, pos)
 
 					last_line = line
 
-				code_fixer.save()
-				total_fix_count += code_fixer.fix_count
+			code_fixer.save()
+			total_fix_count += code_fixer.fix_count
 
 		if total_fix_count > 0:
 			self.handle_check(project, only_new=True)

@@ -141,19 +141,33 @@ class CodeFixer:
 		return True
 
 	def fix_space_replace_tab(self, i: int, pos: int) -> bool:
+		"""
+		Replaces multiple spaces to multiple tabs to keep align about the same
+		"""
 		lines = self.get_lines()
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
 		if line[pos - 1] != " ":
 			pos += 1
-		print("real pos", pos)
 		head = line[:pos]
-		print(head.encode())
 		space_count = len(head) - len(head.rstrip(' '))
 		tab_count = space_count // 4 + int(space_count % 4 != 0)
-		print(space_count, tab_count)
 		tabs = '\t' * tab_count
 		lines[i] = f"{line[:pos - space_count]}{tabs}{line[pos:]}"
+		self.fix_count += 1
+		return True
+
+	def fix_tab_replace_space(self, i: int, pos: int) -> bool:
+		"""
+		Replaces multiple tabs to single space. Cause we don't use multiple sapces anywhere
+		"""
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		match = re.search(r"\t+", line[pos:])
+		if not match:
+			return False
+		lines[i] = f"{line[:pos + match.start()]} {line[pos + match.end():]}"
 		self.fix_count += 1
 		return True
 
@@ -170,12 +184,117 @@ class CodeFixer:
 		lines = self.get_lines()
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
-		print(line[pos:])
 		match = re.search(r"\w+", line[pos:])
 		if not match:
 			return False
 		start = pos + match.end()
 		lines[i] = f"{line[:start]} {line[start:]}"
+		self.fix_count += 1
+		return True
+
+	def add_space_after_operator(self, i: int, pos: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		match = re.search(r"[^\"'\w\d(){}\[\]\s\\/]+", line[pos:])
+		if not match:
+			return False
+		start = pos + match.end()
+		lines[i] = f"{line[:start]} {line[start:]}"
+		self.fix_count += 1
+		return True
+
+	def add_space_before(self, i: int, pos: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		lines[i] = f"{line[:pos]} {line[pos:]}"
+		self.fix_count += 1
+		return True
+
+	def delete_spaces(self, i: int, pos: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		head = line[:pos]
+		space_count = len(head) - len(head.rstrip(' '))
+		lines[i] = f"{line[:pos - space_count]}{line[pos:]}"
+		self.fix_count += 1
+		return True
+
+	def delete_spaces_after(self, i: int, pos: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		match = re.search(r" +", line[pos:])
+		if not match:
+			return False
+		lines[i] = f"{line[:pos + match.start()]}{line[pos + match.end():]}"
+		self.fix_count += 1
+		return True
+
+	def fix_too_many_tab(self, i: int, pos: int) -> bool:
+		"""
+		Aligns line by to fit previous line align level
+		"""
+		if pos != 0:
+			return False
+		lines = self.get_lines()
+		line = lines[i]
+		match = re.search("^\t+", line)
+		if not match:
+			return False
+		tabs_count = match.end()
+		parent_tabs_count = 0
+		if i != 0:
+			match = re.search("^\t+", lines[i - 1])
+			if match:
+				parent_tabs_count = match.end()
+		if tabs_count == parent_tabs_count + 1:
+			# if inner is still produces error, align to the same level as parent
+			target_tabs_count = parent_tabs_count
+		else:
+			# first try to align as inner structure
+			target_tabs_count = parent_tabs_count + 1
+		tabs = '\t' * target_tabs_count
+		# use lstrip to delete also spaces in case if it's a mixed tab space line
+		lines[i] = f"{tabs}{line.lstrip()}"
+		self.fix_count += 1
+		return True
+
+	def trim_leading_whitespaces(self, i: int) -> bool:
+		lines = self.get_lines()
+		lines[i] = lines[i].lstrip()
+		self.fix_count += 1
+		return True
+
+	def set_preproc_indent(self, i: int, indent: int) -> bool:
+		lines = self.get_lines()
+		_indent = " " * indent
+		lines[i] = f"#{_indent}{lines[i][1:].lstrip()}"
+		self.fix_count += 1
+		return True
+
+	def align_by_indent(self, i: int, pos: int, indent: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		while line[pos - 1] != "\t":
+			pos -= 1
+		head = line[:pos].rstrip()
+		space_count = (indent * 4) - len(head)
+		tab_count = space_count // 4 + int(space_count % 4 != 0)
+		print(space_count, tab_count)
+		tabs = '\t' * tab_count
+		lines[i] = f"{head}{tabs}{line[pos:]}"
+		self.fix_count += 1
+		return True
+
+	def add_tab(self, i: int, pos: int):
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		lines[i] = f"{line[:pos]}\t{line[pos:]}"
 		self.fix_count += 1
 		return True
 
@@ -192,17 +311,25 @@ class CodeFixer:
 		So you can't use your current pos for determining position of error in a line.
 		"""
 		i = 0
+		j = 0
 		while i < pos:
 			if line[i] == "\t":
-				pos -= 3
+				n = 4 - (j % 4)
+				pos -= n - 1
+				j += n
+			else:
+				j += 1
 			i += 1
+		if pos < 0:
+			return 0
 		return pos
 
 	def get_new_line(self) -> str:
 		lines = self.get_lines()
 		return "\r\n" if lines[0] and lines[0][-1] == "\r" else "\n"
 
-	def save(self) -> None:
-		with self.path.open("w") as f:
-			self._fix_last_line()
+	def save(self, path: Optional[Path] = None) -> None:
+		path = path or self.path
+		self._fix_last_line()
+		with path.open("w") as f:
 			f.write(self.get_content())

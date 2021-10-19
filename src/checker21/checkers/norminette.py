@@ -12,4 +12,5 @@ class NorminetteChecker(Checker):
 		from checker21.management.commands.norminette import Command
 		cmd = Command(stdout=self.stdout, stderr=self.stderr)
 		cmd.set_style(self.style)
+		cmd._norminette = cmd.load_norminette(project)
 		cmd.handle_check(project)

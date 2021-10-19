@@ -273,3 +273,6 @@ class NorminetteError:
                 description=match.group(4).strip(),
                 raw=error,
             )
+
+    def __str__(self) -> str:
+        return self.raw
