@@ -5,7 +5,6 @@ from typing import Set, Dict, Callable, Any, List
 from checker21.core import Project
 from checker21.management import AnonymousProjectCommand
 from checker21.norminette.fix_machine import NorminetteFixMachine
-from checker21.utils.code_fixer import CodeFixer
 from checker21.utils.norminette import NorminetteCheckStatus, Norminette, NorminetteError
 
 
@@ -205,26 +204,35 @@ class Command(AnonymousProjectCommand):
 						"CONSECUTIVE_SPC",
 						"CONSECUTIVE_NEWLINES",
 						"BRACE_SHOULD_EOL",
+						"BRACE_NEWLINE",
 						"SPACE_REPLACE_TAB",
 						"EMPTY_LINE_FUNCTION",
 						"SPACE_AFTER_KW",
+						"SPC_AFTER_PAR",
 						"SPC_AFTER_OPERATOR",
 						"NO_SPC_BFR_OPR",
 						"TAB_INSTEAD_SPC",
+						"TAB_REPLACE_SPACE",
 						"NO_SPC_AFR_PAR",
 						"TOO_MANY_TAB",
 						"TOO_FEW_TAB",
+						"MIXED_SPACE_TAB",
 						"SPC_BFR_OPERATOR",
+						"NL_AFTER_VAR_DECL",
+						"SPC_AFTER_POINTER",
+						"SPC_BEFORE_NL",
 					}:
 						errors_to_fix.append(_error)
 					elif _error.code in {
 						"MISALIGNED_FUNC_DECL",
+						"MISALIGNED_VAR_DECL",
 					}:
 						errors_to_fix.append(_error)
 						use_original_norminette = True
 					elif _error.code in {
 						"PREPROC_START_LINE",
 						"PREPROC_BAD_INDENT",
+						"RETURN_PARENTHESIS",
 					}:
 						norminette_errors_to_fix.append(_error)
 						use_original_norminette = True
@@ -262,7 +270,27 @@ class Command(AnonymousProjectCommand):
 					pos = error.col - 1
 
 					if error.code in {
+						"NO_ARGS_VOID",
+						"SPACE_BEFORE_FUNC",
+						"CONSECUTIVE_SPC",
+						"SPACE_REPLACE_TAB",
+						"SPACE_AFTER_KW",
+						"SPC_AFTER_PAR",
+						"SPC_AFTER_OPERATOR",
+						"SPC_BFR_OPERATOR",
+						"NO_SPC_BFR_OPR",
+						"NO_SPC_AFR_PAR",
+						"TAB_INSTEAD_SPC",
+						"TAB_REPLACE_SPACE",
+						"TOO_MANY_TAB",
+						"TOO_FEW_TAB",
+						"MIXED_SPACE_TAB",
 						"MISALIGNED_FUNC_DECL",
+						"MISALIGNED_VAR_DECL",
+						"RETURN_PARENTHESIS",
+						"NL_AFTER_VAR_DECL",
+						"SPC_AFTER_POINTER",
+						"SPC_BEFORE_NL",
 					}:
 						fix_machine.fix_norm_error(error)
 					else:
@@ -274,43 +302,24 @@ class Command(AnonymousProjectCommand):
 						elif error.code == "INVALID_HEADER":
 							if not has_empty_line_first:
 								code_fixer.insert_header(user, email)
-						elif error.code == "NO_ARGS_VOID":
-							code_fixer.insert_void_args(line)
-						elif error.code == "SPACE_BEFORE_FUNC":
-							code_fixer.reformat_function_declaration(line)
-						elif error.code == "CONSECUTIVE_SPC":
-							code_fixer.fix_multiple_spaces(line, pos)
-						elif error.code == "SPACE_REPLACE_TAB":
-							code_fixer.fix_space_replace_tab(line, pos)
 						elif error.code == "CONSECUTIVE_NEWLINES" or error.code == "EMPTY_LINE_FUNCTION":
 							code_fixer.fix_multiple_newlines(line)
 							break  # stop processing errors because the lines order is changed
 						elif error.code == "BRACE_SHOULD_EOL":
 							# it inserts a new line inside current line, so we can continue fixing errors
 							code_fixer.fix_brace_should_eol(line, pos)
-						elif error.code == "SPACE_AFTER_KW":
-							code_fixer.add_space_after_kw(line, pos)
-						elif error.code == "SPC_AFTER_OPERATOR":
-							code_fixer.add_space_after_operator(line, pos)
-						elif error.code == "SPC_BFR_OPERATOR":
-							code_fixer.add_space_before(line, pos)
-						elif error.code == "NO_SPC_BFR_OPR":
-							code_fixer.delete_spaces(line, pos)
-						elif error.code == "TAB_INSTEAD_SPC":
-							code_fixer.fix_tab_replace_space(line, pos)
-						elif error.code == "NO_SPC_AFR_PAR":
-							code_fixer.delete_spaces_after(line, pos)
-						elif error.code == "TOO_MANY_TAB":
-							code_fixer.fix_too_many_tab(line, pos)
-						elif error.code == "TOO_FEW_TAB":
-							code_fixer.add_tab(line, pos)
+						elif error.code == "BRACE_NEWLINE":
+							# it inserts a new line inside current line, so we can continue fixing errors
+							code_fixer.fix_brace_newline(line, pos)
+
+						fix_machine.fix_count += 1
 
 					last_line = line
 
-			code_fixer.save()
-			total_fix_count += code_fixer.fix_count
+			fix_machine.save()
+			total_fix_count += fix_machine.fix_count
 
-		if total_fix_count > 0:
+		if try_fix_count > 0:
 			self.handle_check(project, only_new=True)
 
 		self.stdout.write(self.style.INFO(f"Norm errors: {total_errors}"))

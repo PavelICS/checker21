@@ -22,7 +22,7 @@ class FixPreprocessorIndent(CheckPreprocessorIndent):
 		tken = context.peek_token(i)
 		current_indent = context.preproc_scope_indent
 		if context.peek_token(i).pos[1] != 1:
-			context.fix_error("PREPROC_START_LINE", context.peek_token(0))
+			context.fix_error("PREPROC_START_LINE", 0)
 		tken = context.peek_token(i)
 		if context.check_token(i, ALLOWED_PREPROC) is False:
 			# context.new_error("PREPROC_UKN_STATEMENT", context.peek_token(i))
@@ -36,7 +36,7 @@ class FixPreprocessorIndent(CheckPreprocessorIndent):
 		val = tken.value[1:] if tken.value else tken.type
 		spaces = self.get_space_number(tken.value if tken.value else tken.type)
 		if current_indent != spaces:
-			context.fix_error("PREPROC_BAD_INDENT", context.peek_token(i), indent=current_indent)
+			context.fix_error("PREPROC_BAD_INDENT", i, indent=current_indent)
 
 		i += 1
 		tken = context.peek_token(i)
