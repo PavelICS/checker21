@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List
 
 HEADER = """
 /* ************************************************************************** */
@@ -22,14 +22,12 @@ class CodeFixer:
 	path: Path
 	content: Optional[str]
 	lines: Optional[List[str]]
-	fix_count: int
 
 	def __init__(self, path: Path):
 		self.path = path
 		with path.open() as f:
 			self.content = f.read()
 		self.lines = None
-		self.fix_count = 0
 
 	def get_lines(self) -> List[str]:
 		if self.lines is not None:
@@ -95,18 +93,15 @@ class CodeFixer:
 
 		header = "\n".join(new_header_parts)
 		self.content = header + self.get_content().lstrip()
-		self.fix_count += 1
 		return True
 
 	def delete_file_leading_spaces(self) -> bool:
 		self.content = self.get_content().lstrip()
-		self.fix_count += 1
 		return True
 
 	def insert_void_args(self, i: int) -> bool:
 		lines = self.get_lines()
 		lines[i] = re.sub(r"\([ \t]*", "(void", lines[i])
-		self.fix_count += 1
 		return True
 
 	def reformat_function_declaration(self, i: int) -> bool:
@@ -119,7 +114,6 @@ class CodeFixer:
 			func_other = "(" + match.group(5)
 			print(return_type, asterisk, func_name, func_other)
 			lines[i] = f"{return_type}\t{asterisk}{func_name}{func_other}"
-			self.fix_count += 1
 			return True
 		return False
 
@@ -128,7 +122,6 @@ class CodeFixer:
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
 		lines[i] = line[:pos] + re.sub(" +", " ", line[pos:], count=1)
-		self.fix_count += 1
 		return True
 
 	def fix_multiple_newlines(self, i: int) -> bool:
@@ -137,7 +130,6 @@ class CodeFixer:
 		while i < length and not lines[i].strip():
 			del lines[i]
 			length -= 1
-		self.fix_count += 1
 		return True
 
 	def fix_space_replace_tab(self, i: int, pos: int) -> bool:
@@ -154,7 +146,6 @@ class CodeFixer:
 		tab_count = space_count // 4 + int(space_count % 4 != 0)
 		tabs = '\t' * tab_count
 		lines[i] = f"{line[:pos - space_count]}{tabs}{line[pos:]}"
-		self.fix_count += 1
 		return True
 
 	def fix_tab_replace_space(self, i: int, pos: int) -> bool:
@@ -168,7 +159,6 @@ class CodeFixer:
 		if not match:
 			return False
 		lines[i] = f"{line[:pos + match.start()]} {line[pos + match.end():]}"
-		self.fix_count += 1
 		return True
 
 	def fix_brace_should_eol(self, i: int, pos: int) -> bool:
@@ -177,7 +167,18 @@ class CodeFixer:
 		pos += 1
 		pos = self._translate_pos(line, pos)
 		lines[i] = f"{line[:pos]}{self.get_new_line()}{line[pos:]}"
-		self.fix_count += 1
+		return True
+
+	def fix_brace_newline(self, i: int, pos: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		lines[i] = f"{line[:pos]}{self.get_new_line()}{line[pos:]}"
+		return True
+
+	def add_eol(self, i: int) -> bool:
+		lines = self.get_lines()
+		lines[i] += "\n"
 		return True
 
 	def add_space_after_kw(self, i: int, pos: int) -> bool:
@@ -189,7 +190,6 @@ class CodeFixer:
 			return False
 		start = pos + match.end()
 		lines[i] = f"{line[:start]} {line[start:]}"
-		self.fix_count += 1
 		return True
 
 	def add_space_after_operator(self, i: int, pos: int) -> bool:
@@ -201,7 +201,14 @@ class CodeFixer:
 			return False
 		start = pos + match.end()
 		lines[i] = f"{line[:start]} {line[start:]}"
-		self.fix_count += 1
+		return True
+
+	def add_space_after(self, i: int, pos: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		pos += 1
+		lines[i] = f"{line[:pos]} {line[pos:]}"
 		return True
 
 	def add_space_before(self, i: int, pos: int) -> bool:
@@ -209,7 +216,6 @@ class CodeFixer:
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
 		lines[i] = f"{line[:pos]} {line[pos:]}"
-		self.fix_count += 1
 		return True
 
 	def delete_spaces(self, i: int, pos: int) -> bool:
@@ -219,18 +225,23 @@ class CodeFixer:
 		head = line[:pos]
 		space_count = len(head) - len(head.rstrip(' '))
 		lines[i] = f"{line[:pos - space_count]}{line[pos:]}"
-		self.fix_count += 1
 		return True
 
 	def delete_spaces_after(self, i: int, pos: int) -> bool:
+		return self._delete_regexp_after(i, pos, r"[ ]+")
+
+	def delete_whitespaces_after(self, i: int, pos: int) -> bool:
+		# for us whitespaces are only tabs ans spaces
+		return self._delete_regexp_after(i, pos, r"[\t ]+")
+
+	def _delete_regexp_after(self, i: int, pos: int, regexp: str):
 		lines = self.get_lines()
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
-		match = re.search(r" +", line[pos:])
+		match = re.search(regexp, line[pos:])
 		if not match:
 			return False
 		lines[i] = f"{line[:pos + match.start()]}{line[pos + match.end():]}"
-		self.fix_count += 1
 		return True
 
 	def fix_too_many_tab(self, i: int, pos: int) -> bool:
@@ -242,9 +253,9 @@ class CodeFixer:
 		lines = self.get_lines()
 		line = lines[i]
 		match = re.search("^\t+", line)
-		if not match:
-			return False
-		tabs_count = match.end()
+		tabs_count = 0
+		if match:
+			tabs_count = match.end()
 		parent_tabs_count = 0
 		if i != 0:
 			match = re.search("^\t+", lines[i - 1])
@@ -259,43 +270,90 @@ class CodeFixer:
 		tabs = '\t' * target_tabs_count
 		# use lstrip to delete also spaces in case if it's a mixed tab space line
 		lines[i] = f"{tabs}{line.lstrip()}"
-		self.fix_count += 1
 		return True
 
-	def trim_leading_whitespaces(self, i: int) -> bool:
-		lines = self.get_lines()
-		lines[i] = lines[i].lstrip()
-		self.fix_count += 1
-		return True
-
-	def set_preproc_indent(self, i: int, indent: int) -> bool:
-		lines = self.get_lines()
-		_indent = " " * indent
-		lines[i] = f"#{_indent}{lines[i][1:].lstrip()}"
-		self.fix_count += 1
-		return True
-
-	def align_by_indent(self, i: int, pos: int, indent: int) -> bool:
+	def fix_mixed_space_tab(self, i: int, pos: int):
+		"""
+		Deletes spaces and preserves only tabs
+		"""
 		lines = self.get_lines()
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
+		match = re.search("^[\t ]+", line[pos:])
+		if not match:
+			return False
+		pos += match.end()
+		head = line[:pos].rstrip()
+		whitespaces = line[len(head):pos]
+		tabs = whitespaces.replace(" ", "")
+		lines[i] = f"{head}{tabs}{line[pos:]}"
+		return True
+
+	def trim_leading_whitespaces(self, i: int) -> bool:
+		"""
+		Deletes whitespaces from the beginning of the line
+		"""
+		lines = self.get_lines()
+		lines[i] = lines[i].lstrip()
+		return True
+
+	def trim_trailing_whitespaces(self, i: int) -> bool:
+		"""
+		Deletes whitespaces from the end of the line
+		"""
+		lines = self.get_lines()
+		lines[i] = lines[i].rstrip()
+		return True
+
+	def set_preproc_indent(self, i: int, indent: int) -> bool:
+		"""
+		Sets the given indent to the preprocessor
+		"""
+		lines = self.get_lines()
+		_indent = " " * indent
+		lines[i] = f"#{_indent}{lines[i][1:].lstrip()}"
+		return True
+
+	def align_by_indent(self, i: int, pos: int, indent: int) -> bool:
+		"""
+		Aligns line to the given indent by placing tabs at the given pos
+		"""
+		lines = self.get_lines()
+		line = lines[i]
+		pos = self._translate_pos(line, pos)
+		print(line, pos, indent)
 		while line[pos - 1] != "\t":
 			pos -= 1
 		head = line[:pos].rstrip()
-		space_count = (indent * 4) - len(head)
+		print(head.encode())
+		space_count = (indent * 4) - self._count_indent_by_line(head)
 		tab_count = space_count // 4 + int(space_count % 4 != 0)
-		print(space_count, tab_count)
 		tabs = '\t' * tab_count
 		lines[i] = f"{head}{tabs}{line[pos:]}"
-		self.fix_count += 1
 		return True
 
 	def add_tab(self, i: int, pos: int):
+		"""
+		Adds a single tab at `pos`
+		"""
 		lines = self.get_lines()
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
 		lines[i] = f"{line[:pos]}\t{line[pos:]}"
-		self.fix_count += 1
+		return True
+
+	def wrap_in_braces(self, i_start: int, pos_start: int, i_end: int, pos_end: int) -> bool:
+		lines = self.get_lines()
+		line = lines[i_start]
+		pos = self._translate_pos(line, pos_start)
+		lines[i_start] = f"{line[:pos]}({line[pos:]}"
+
+		line = lines[i_end]
+		pos = self._translate_pos(line, pos_end)
+		if i_start == i_end:
+			# +1 because we've added an open brace
+			pos += 1
+		lines[i_end] = f"{line[:pos]}){line[pos:]}"
 		return True
 
 	def _fix_last_line(self) -> bool:
@@ -304,6 +362,16 @@ class CodeFixer:
 		if lines[-1]:
 			lines[-1] += self.get_new_line()
 		return True
+
+	def _count_indent_by_line(self, line: str):
+		indent = 0
+		for ch in line:
+			if ch == "\t":
+				n = 4 - (indent % 4)
+				indent += n
+			else:
+				indent += 1
+		return indent
 
 	def _translate_pos(self, line: str, pos: int) -> int:
 		"""
