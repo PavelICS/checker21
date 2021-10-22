@@ -22,12 +22,14 @@ class CodeFixer:
 	path: Path
 	content: Optional[str]
 	lines: Optional[List[str]]
+	lines_diff: int
 
 	def __init__(self, path: Path):
 		self.path = path
 		with path.open() as f:
 			self.content = f.read()
 		self.lines = None
+		self.lines_diff = 0
 
 	def get_lines(self) -> List[str]:
 		if self.lines is not None:
@@ -47,6 +49,10 @@ class CodeFixer:
 		else:
 			self.content = ""
 		return self.content
+
+	def set_content(self, content: str) -> None:
+		self.content = content
+		self.lines = None
 
 	def insert_header(self, username: str, email: str) -> bool:
 		if not username:
@@ -89,14 +95,11 @@ class CodeFixer:
 					return " " * (spaces_length + length_diff)
 				part = re.sub(rf"({escaped_spaces_pattern}\s*)", delete_spaces, part)
 			new_header_parts.append(part)
-		new_header_parts.append("\n")
+		new_header_parts.append("")
 
 		header = "\n".join(new_header_parts)
-		self.content = header + self.get_content().lstrip()
-		return True
-
-	def delete_file_leading_spaces(self) -> bool:
-		self.content = self.get_content().lstrip()
+		self.get_lines().insert(0, header)
+		self.lines_diff = 1
 		return True
 
 	def insert_void_args(self, i: int) -> bool:
@@ -126,10 +129,13 @@ class CodeFixer:
 
 	def fix_multiple_newlines(self, i: int) -> bool:
 		lines = self.get_lines()
+		deleted_count = 0
 		length = len(lines)
 		while i < length and not lines[i].strip():
 			del lines[i]
 			length -= 1
+			deleted_count += 1
+		self.lines_diff = -deleted_count
 		return True
 
 	def fix_space_replace_tab(self, i: int, pos: int) -> bool:
@@ -275,6 +281,7 @@ class CodeFixer:
 	def fix_mixed_space_tab(self, i: int, pos: int):
 		"""
 		Deletes spaces and preserves only tabs
+		If there is only the leading or trailing space, delete tabs
 		"""
 		lines = self.get_lines()
 		line = lines[i]
@@ -285,7 +292,10 @@ class CodeFixer:
 		pos += match.end()
 		head = line[:pos].rstrip()
 		whitespaces = line[len(head):pos]
-		tabs = whitespaces.replace(" ", "")
+		if " " not in whitespaces[1:]:
+			tabs = " "
+		else:
+			tabs = whitespaces.replace(" ", "")
 		lines[i] = f"{head}{tabs}{line[pos:]}"
 		return True
 
@@ -321,11 +331,9 @@ class CodeFixer:
 		lines = self.get_lines()
 		line = lines[i]
 		pos = self._translate_pos(line, pos)
-		print(line, pos, indent)
 		while line[pos - 1] != "\t":
 			pos -= 1
 		head = line[:pos].rstrip()
-		print(head.encode())
 		space_count = (indent * 4) - self._count_indent_by_line(head)
 		tab_count = space_count // 4 + int(space_count % 4 != 0)
 		tabs = '\t' * tab_count

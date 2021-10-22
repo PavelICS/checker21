@@ -1,4 +1,4 @@
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Union
 
 from norminette.context import Context as NorminetteContext
 from norminette.lexer import Token
@@ -22,6 +22,9 @@ class Context(NorminetteContext):
 		self.fix_machine = fix_machine
 
 	def fix_error(self, errno: str, tkn_pos: int, **kwargs) -> None:
+		if not hasattr(self, 'fix_machine'):
+			return
+
 		token: Token = self.peek_token(tkn_pos)
 		error = NormError(errno, token.pos[0], token.pos[1])
 		if 'end' in kwargs:
@@ -48,3 +51,17 @@ class Context(NorminetteContext):
 		if scope not in self.var_decl_align:
 			self.var_decl_align[scope] = []
 		self.var_decl_align[scope].append((tkn, tkn.pos[1]))
+
+	def delete_after(self, pos: int, value: Union[str, List[str]]) -> None:
+		"""Mark all tokens after 'pos' to be deleted if they match against a value or list of values"""
+		tmp = pos + 1
+		while self.peek_token(tmp) and self.check_token(tmp, value) is True:
+			self.peek_token(tmp).to_delete = True
+			tmp += 1
+
+	def delete_before(self, pos: int, value: Union[str, List[str]]) -> None:
+		"""Mark all tokens before 'pos' to be deleted if they match against a value or list of values"""
+		tmp = pos - 1
+		while self.peek_token(tmp) and self.check_token(tmp, value) is True:
+			self.peek_token(tmp).to_delete = True
+			tmp -= 1
