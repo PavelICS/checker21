@@ -1,5 +1,3 @@
-import re
-
 from checker21.core import GitChecker
 from checker21.utils.bash import bash
 from checker21.utils.files import update_file_with_backup
@@ -45,6 +43,26 @@ class LibftSplitChecker(GitChecker):
 	def git_config(self):
 		def update_file(data):
 			data = data.replace(b"../*.c", b"../../*.c")
+			return data
+
+		update_file_with_backup("Makefile", update_file)
+
+
+class LibftTesterChecker(GitChecker):
+	name = 'libft-tester'
+	verbose_name = 'LibftTester'
+	description = 'Downloads LibftTester checker and runs it'
+
+	git_url = "https://github.com/Tripouille/libftTester"
+	target_dir = "libft-tester"
+
+	def run(self, project, subject):
+		self.git_config()
+		bash(["make", "a"], capture_output=False)
+
+	def git_config(self):
+		def update_file(data):
+			data = data.replace(b"= $(PARENT_DIR)", b"= ../../")
 			return data
 
 		update_file_with_backup("Makefile", update_file)
