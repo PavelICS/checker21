@@ -1,4 +1,4 @@
-# checker21 v0.2.3a
+# checker21 v0.2.4a
 
 Установка и запуск:
 ----------------------------
@@ -53,9 +53,13 @@ norminette запускает проверку нормы только для ф
 Libft чекер:
 ----------------------------
 
-Для тестирования libft используется libft-unit-test
+Для тестирования libft используется libft-unit-test, split, libft-tester
 
 https://github.com/alelievr/libft-unit-test
+
+https://github.com/Ysoroko/FT_SPLIT_TESTER
+
+https://github.com/Tripouille/libftTester
 
 GetNextLine чекер:
 ----------------------------
