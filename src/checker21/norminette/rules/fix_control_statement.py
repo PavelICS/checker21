@@ -17,7 +17,7 @@ class FixControlStatement(CheckControlStatement):
             if context.check_token(i, "SEMI_COLON") is True:
                 # ****************************** FIX ********************************* #
                 # context.new_error("EXP_NEWLINE", context.peek_token(i))
-                context.peek_token(i).to_add_newline_before = True
+                context.peek_token(i).exp_newline = True
                 # ******************************************************************** #
                 return True, i
             if context.check_token(i, forbidden_cs) is True:

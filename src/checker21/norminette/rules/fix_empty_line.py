@@ -27,8 +27,8 @@ class FixEmptyLine(CheckEmptyLine):
 					else:
 						# ****************************** FIX ********************************* #
 						# context.new_error("NL_AFTER_VAR_DECL", context.peek_token(i))
-						# delete an empty line
-						# TODO context.peek_token(i).to_delete = True
+						# add an empty line
+						context.peek_token(i).to_add_newline_before = True
 						# ******************************************************************** #
 						return True, i
 		if len(context.history) > 1 and context.history[-2] == "IsPreprocessorStatement" and context.history[-1] != "IsPreprocessorStatement" and context.history[-1] != "IsEmptyLine" and context.history[-1] != "IsComment":

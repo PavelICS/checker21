@@ -34,10 +34,18 @@ class AST:
 		self.tokens = tokens
 
 	def refactor(self) -> 'AST':
+		too_many_instr_line = None
 		new_tokens: List[Token] = []
 		for token in self.tokens:
 			if getattr(token, 'to_delete', False):
 				continue
+
+			if getattr(token, 'too_many_instr', False):
+				token.to_add_newline_before = True
+				too_many_instr_line = token.pos[0]
+
+			if getattr(token, 'exp_newline', False):
+				token.to_add_newline_before = too_many_instr_line != token.pos[0]
 
 			if getattr(token, 'to_add_newline_before', False):
 				self._refactor_add_newline(new_tokens)

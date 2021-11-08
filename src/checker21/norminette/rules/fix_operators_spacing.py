@@ -3,6 +3,12 @@ from norminette.rules.check_operators_spacing import (
 	son_operators, p_operators, whitespaces, c_operators
 )
 
+spec_operators = [
+	"NOT",
+	"BWISE_NOT",
+	"DIV",
+]
+
 
 class FixOperatorsSpacing(CheckOperatorsSpacing):
 	def check_prefix(self, context, pos):
@@ -164,6 +170,7 @@ class FixOperatorsSpacing(CheckOperatorsSpacing):
 							"MULT",
 							"BWISE_AND",
 							"IDENTIFIER",
+							"CONSTANT",
 						],
 					)
 					is True
@@ -232,7 +239,7 @@ class FixOperatorsSpacing(CheckOperatorsSpacing):
 				pos + 1 < len(context.tokens[: context.tkn_scope])
 				and context.check_token(
 			pos + 1,
-			["SPACE", "LPARENTHESIS", "RPARENTHESIS", "LBRACKET", "RBRACKET", "NEWLINE", "COMMA"] + glued_operators)
+			["SPACE", "LPARENTHESIS", "RPARENTHESIS", "LBRACKET", "RBRACKET", "NEWLINE", "COMMA"] + spec_operators)
 				is False
 		):
 			tmp = pos - 1
@@ -246,7 +253,7 @@ class FixOperatorsSpacing(CheckOperatorsSpacing):
 					# add space
 					context.peek_token(pos).to_add_space_after = True
 					# ******************************************************************** #
-			elif context.check_token(tmp, glued_operators) is False:
+			elif context.check_token(tmp, glued_operators) is False and not (context.check_token(pos, ["PLUS", "MINUS"]) and context.check_token(pos + 1, "CONSTANT")):
 				# ****************************** FIX ********************************* #
 				# context.new_error("SPC_AFTER_OPERATOR", context.peek_token(pos))
 				# add space

@@ -40,5 +40,7 @@ registry.dependencies = {}
 registry.rules = rules
 for rule in rules.values():
 	rule.register(registry)
+for k, v in registry.dependencies.items():
+	registry.dependencies[k] = sorted(registry.dependencies[k], reverse=True)
 
 __all__ = ['registry']

@@ -9,7 +9,7 @@ class FixAssignationIndent(CheckAssignationIndent):
         """
         i = 0
         expected = context.scope.indent
-        if context.history[-1] == "IsAssignation":
+        if context.history[-1] in ["IsAssignation", "IsVarDeclaration"]:
             nest = expected + 1
         elif context.history[-1] == "IsFuncPrototype":
             nest = context.func_alignment
@@ -40,14 +40,14 @@ class FixAssignationIndent(CheckAssignationIndent):
                     raise CParsingError(f"Error: Unexpected EOF l.{context.peek_token(i - 1).pos[0]}")
                 if context.check_token(i + got, ["LBRACKET", "RBRACKET", "LBRACE", "RBRACE"]):
                     nest -= 1
-                if got > nest or (got > nest + 1 and context.history[-1] == "IsAssignation"):
+                if got > nest or (got > nest + 1 and context.history[-1] in ["IsAssignation", "IsVarDeclaration"]):
                     # ****************************** FIX ********************************* #
                     # context.new_error("TOO_MANY_TAB", context.peek_token(i))
                     # set indent
                     context.peek_token(i + got).indent = nest
                     # ******************************************************************** #
                     return True, i
-                elif got < nest or (got < nest - 1 and context.history[-1] == "IsAssignation"):
+                elif got < nest or (got < nest - 1 and context.history[-1] in ["IsAssignation", "IsVarDeclaration"]):
                     # ****************************** FIX ********************************* #
                     # context.new_error("TOO_FEW_TAB", context.peek_token(i))
                     # set indent

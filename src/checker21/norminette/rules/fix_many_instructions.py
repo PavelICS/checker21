@@ -10,7 +10,7 @@ class FixManyInstructions(CheckManyInstructions):
 			# ****************************** FIX ********************************* #
 			# context.new_error("TOO_MANY_INSTR", context.peek_token(0))
 			# delete space
-			context.peek_token(0).to_add_newline_before = True
+			context.peek_token(0).too_many_instr = True
 			# ******************************************************************** #
 			return False, 0
 		# if context.history[-1] in ["IsFuncDeclaration", "IsFuncPrototype", "IsControlStatement"]:
