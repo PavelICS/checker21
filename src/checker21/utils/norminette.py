@@ -186,17 +186,24 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
     active_record: Optional[NorminetteFileCheckResult] = None
     last_warning = None
 
-    def add_error(error):
+    def add_error(error: str) -> None:
         if not active_record or "errors" not in active_record:
             raise NorminetteException(f"Couldn't add errors to `{filename}`")
         active_record["errors"].append(error)
+
+    def add_warning(warning: str) -> None:
+        if not active_record:
+            raise NorminetteException(f"Couldn't add warnings to `{filename}`")
+        if "warnings" not in active_record:
+            active_record["warnings"] = []
+        active_record["warnings"].append(warning)
 
     def add_record(record):
         nonlocal last_warning
 
         result[filename] = record
         if last_warning:
-            active_record["warnings"] = [last_warning]
+            add_warning(last_warning)
             last_warning = None
 
     for line in output.split("\n"):
@@ -230,6 +237,10 @@ def parse_norminette_output(output: str) -> Dict[str, NorminetteFileCheckResult]
                 continue
 
             add_error(line)
+            continue
+
+        if line.startswith("Notice:"):
+            add_warning(line)
             continue
 
         if line.startswith("\x1b[31m"):

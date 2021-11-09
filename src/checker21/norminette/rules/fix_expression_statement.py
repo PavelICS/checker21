@@ -13,14 +13,18 @@ class FixExpressionStatement(CheckExpressionStatement):
 		while context.check_token(i, ["SEMI_COLON", "NEWLINE"]) is False:
 			if context.check_token(i, kw) is True:
 				if context.check_token(i + 1, ["SPACE", "NEWLINE", "RPARENTHESIS", "COMMENT", "MULT_COMMENT"]) is False:
+					# ****************************** FIX ********************************* #
 					# context.new_error("SPACE_AFTER_KW", context.peek_token(i))
-					# it will be fixed by regexps
-					pass
+					# add a space after
+					context.peek_token(i).to_add_space_after = True
+					# ******************************************************************** #
 			if context.check_token(i, ["MULT", "BWISE_AND"]) is True and i > 0:
 				if context.check_token(i - 1, "IDENTIFIER") is True:
+					# ****************************** FIX ********************************* #
 					# context.new_error("SPACE_AFTER_KW", context.peek_token(i - 1))
-					# it will be fixed by regexps
-					pass
+					# add a space after
+					context.peek_token(i - 1).to_add_space_after = True
+					# ******************************************************************** #
 			if context.check_token(i, "RETURN") is True:
 				tmp = i + 1
 				tmp = context.skip_ws(tmp)

@@ -21,13 +21,19 @@ class FixPreprocessorIndent(CheckPreprocessorIndent):
 		i = context.skip_ws(i)
 		tken = context.peek_token(i)
 		current_indent = context.preproc_scope_indent
-		if context.peek_token(i).pos[1] != 1:
-			context.fix_error("PREPROC_START_LINE", 0)
+		# ****************************** FIX ********************************* #
+		# if context.peek_token(i).pos[1] != 1:
+		# 	context.fix_error("PREPROC_START_LINE", 0)
+		# set indent
+		context.peek_token(i).indent = 0
+		# ******************************************************************** #
 		tken = context.peek_token(i)
 		if context.check_token(i, ALLOWED_PREPROC) is False:
+			# ****************************** FIX ********************************* #
 			# context.new_error("PREPROC_UKN_STATEMENT", context.peek_token(i))
 			# We have nothing do to with it
 			pass
+			# ******************************************************************** #
 		if context.check_token(i, TOO_MUCH_INDENT) is True:
 			current_indent -= 1
 		if current_indent < 0:
@@ -35,13 +41,19 @@ class FixPreprocessorIndent(CheckPreprocessorIndent):
 		fmt = ""
 		val = tken.value[1:] if tken.value else tken.type
 		spaces = self.get_space_number(tken.value if tken.value else tken.type)
-		if current_indent != spaces:
-			context.fix_error("PREPROC_BAD_INDENT", i, indent=current_indent)
+		# ****************************** FIX ********************************* #
+		# if current_indent != spaces:
+		# 	context.fix_error("PREPROC_BAD_INDENT", i, indent=current_indent)
+		# set new preproc indent to the token
+		context.peek_token(i).preproc_indent = current_indent
+		# ******************************************************************** #
 
 		i += 1
 		tken = context.peek_token(i)
 		if tken is not None and tken.type not in ["NEWLINE", "COMMENT", "MULT_COMMENT"]:
+			# ****************************** FIX ********************************* #
 			# context.new_error("PREPROC_EXPECTED_EOL", context.peek_token(i))
 			# We have auto fix for EOF, skip other EOL errors.
 			pass
+			# ******************************************************************** #
 		return False, 0

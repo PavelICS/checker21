@@ -1,11 +1,10 @@
-import re
 from pathlib import Path
-from typing import Set, Dict, Callable, Any, List
+from typing import Set, Dict, Callable, Any, List, Generator, Tuple
 
 from checker21.core import Project
 from checker21.management import AnonymousProjectCommand
 from checker21.norminette.fix_machine import NorminetteFixMachine
-from checker21.utils.norminette import NorminetteCheckStatus, Norminette, NorminetteError
+from checker21.utils.norminette import NorminetteCheckStatus, Norminette, NorminetteError, NorminetteFileCheckResult
 
 
 class Command(AnonymousProjectCommand):
@@ -117,6 +116,7 @@ class Command(AnonymousProjectCommand):
 			*,
 			only_errors: bool = False,
 			only_new: bool = False,
+			silent: bool = False,
 			**options
 	) -> None:
 		self.handle_version(**options)
@@ -130,6 +130,9 @@ class Command(AnonymousProjectCommand):
 
 		if not result:
 			self.stdout.write(self.style.INFO("Nothing has changed!"))
+			return
+
+		if silent:
 			return
 
 		if only_errors:
@@ -176,13 +179,24 @@ class Command(AnonymousProjectCommand):
 	def handle_fix(self, project: Project, **options) -> None:
 		user = self.get_user(options)
 		email = self.get_email(user, options)
-		try_fix_count = 0
-		total_fix_count = 0
-		total_errors = 0
 
 		fix_machine = NorminetteFixMachine(self.stdout, self.stderr, self.style)
+		fix_machine.set_user_email(user, email)
 
-		self.stdout.write(self.style.INFO("Trying to fix cached errors..."))
+		if self.norminette.state.result:
+			self.stdout.write(self.style.INFO("Trying to fix cached errors..."))
+		else:
+			self.stdout.write(self.style.INFO("Collecting errors by norminette check..."))
+			self.handle_check(project, silent=True)
+
+		total_errors = self._count_errors(self.norminette.state.result)
+
+		ast_fix_count = self._handle_fix_by_ast(project, fix_machine)
+
+		stats = self._handle_fix_by_norminette(project, fix_machine)
+		total_fix_count, try_fix_count = stats
+		total_fix_count += ast_fix_count
+
 		result = self.norminette.state.result
 		for file, info in result.items():
 			status = info["status"]
@@ -191,143 +205,192 @@ class Command(AnonymousProjectCommand):
 				continue
 
 			errors_to_fix: List[NorminetteError] = []
-			norminette_errors_to_fix: List[NorminetteError] = []
-			has_empty_line_first = False
-			use_original_norminette = False
-			total_errors += len(info["errors"])
-			for error in info["errors"]:
-				_error = NorminetteError.parse(error)
-				if _error:
-					if _error.code in {
-						"NO_ARGS_VOID",
-						"SPACE_BEFORE_FUNC",
-						"CONSECUTIVE_SPC",
-						"CONSECUTIVE_NEWLINES",
-						"BRACE_SHOULD_EOL",
-						"BRACE_NEWLINE",
-						"SPACE_REPLACE_TAB",
-						"EMPTY_LINE_FUNCTION",
-						"SPACE_AFTER_KW",
-						"SPC_AFTER_PAR",
-						"SPC_AFTER_OPERATOR",
-						"NO_SPC_BFR_OPR",
-						"TAB_INSTEAD_SPC",
-						"TAB_REPLACE_SPACE",
-						"NO_SPC_AFR_PAR",
-						"TOO_MANY_TAB",
-						"TOO_FEW_TAB",
-						"MIXED_SPACE_TAB",
-						"SPC_BFR_OPERATOR",
-						"NL_AFTER_VAR_DECL",
-						"SPC_AFTER_POINTER",
-						"SPC_BEFORE_NL",
-					}:
-						errors_to_fix.append(_error)
-					elif _error.code in {
-						"MISALIGNED_FUNC_DECL",
-						"MISALIGNED_VAR_DECL",
-					}:
-						errors_to_fix.append(_error)
-						use_original_norminette = True
-					elif _error.code in {
-						"PREPROC_START_LINE",
-						"PREPROC_BAD_INDENT",
-						"RETURN_PARENTHESIS",
-					}:
-						norminette_errors_to_fix.append(_error)
-						use_original_norminette = True
-					elif _error.code == "EMPTY_LINE_FILE_START":
-						has_empty_line_first = True
-						errors_to_fix.append(_error)
-					elif _error.code == "INVALID_HEADER":
-						if not has_empty_line_first:
-							errors_to_fix.append(_error)
+			use_norminette_machines = False
+			for error in self._iter_parsed_errors(info["errors"]):
+				if error.code in {
+					"INVALID_HEADER",
+					"NO_ARGS_VOID",
+					"SPACE_BEFORE_FUNC",
+					"CONSECUTIVE_SPC",
+					"BRACE_SHOULD_EOL",
+					"BRACE_NEWLINE",
+					"SPACE_REPLACE_TAB",
+					"SPACE_AFTER_KW",
+					"SPC_AFTER_PAR",
+					"SPC_AFTER_OPERATOR",
+					"NO_SPC_BFR_OPR",
+					"TAB_INSTEAD_SPC",
+					"TAB_REPLACE_SPACE",
+					"NO_SPC_AFR_PAR",
+					"SPC_BFR_OPERATOR",
+					"NL_AFTER_VAR_DECL",
+					"SPC_AFTER_POINTER",
+					"SPC_BEFORE_NL",
+				}:
+					errors_to_fix.append(error)
+				elif error.code in {
+					"MISALIGNED_FUNC_DECL",
+					"MISALIGNED_VAR_DECL",
+				}:
+					errors_to_fix.append(error)
+					use_norminette_machines = True
 
-			_try_to_fix = len(errors_to_fix) + len(norminette_errors_to_fix)
+			_try_to_fix = len(errors_to_fix)
 			if _try_to_fix == 0:
 				continue
 
 			path = Path(file)
 			if not path.exists():
 				continue
-			self.stdout.write(self.style.INFO(f'Trying to fix errors in {file}'))
+
+			self.stdout.write(self.style.INFO(f'Trying to fix errors in {file} by regexp'))
 			fix_machine.load_file(path)
-
-			fixed_by_norminette_machine_count = 0
-			try_fix_count += _try_to_fix
-			if use_original_norminette:
+			if use_norminette_machines:
 				fix_machine.run_with_norminette()
-				fixed_by_norminette_machine_count = fix_machine.fix_count
 
-			code_fixer = fix_machine.code_fixer
-			if errors_to_fix and fixed_by_norminette_machine_count == 0:
-				# fix errors by regexp only if there is no errors to fix by norminette machine
-				last_line = -1
-				for error in errors_to_fix:
-					line = error.line - 1
-					if line == last_line:
-						continue  # skip errors processing if multiple errors in a line
-					pos = error.col - 1
-
-					if error.code in {
-						"NO_ARGS_VOID",
-						"SPACE_BEFORE_FUNC",
-						"CONSECUTIVE_SPC",
-						"SPACE_REPLACE_TAB",
-						"SPACE_AFTER_KW",
-						"SPC_AFTER_PAR",
-						"SPC_AFTER_OPERATOR",
-						"SPC_BFR_OPERATOR",
-						"NO_SPC_BFR_OPR",
-						"NO_SPC_AFR_PAR",
-						"TAB_INSTEAD_SPC",
-						"TAB_REPLACE_SPACE",
-						"TOO_MANY_TAB",
-						"TOO_FEW_TAB",
-						"MIXED_SPACE_TAB",
-						"MISALIGNED_FUNC_DECL",
-						"MISALIGNED_VAR_DECL",
-						"RETURN_PARENTHESIS",
-						"NL_AFTER_VAR_DECL",
-						"SPC_AFTER_POINTER",
-						"SPC_BEFORE_NL",
-					}:
-						fix_machine.fix_norm_error(error)
-					else:
-						# TODO move logic to fix_machine
-						self.stdout.write(f"Fixing {error}")
-						if error.code == "EMPTY_LINE_FILE_START":
-							code_fixer.delete_file_leading_spaces()
-							break  # stop processing errors because the lines order is changed
-						elif error.code == "INVALID_HEADER":
-							if not has_empty_line_first:
-								code_fixer.insert_header(user, email)
-						elif error.code == "CONSECUTIVE_NEWLINES" or error.code == "EMPTY_LINE_FUNCTION":
-							code_fixer.fix_multiple_newlines(line)
-							break  # stop processing errors because the lines order is changed
-						elif error.code == "BRACE_SHOULD_EOL":
-							# it inserts a new line inside current line, so we can continue fixing errors
-							code_fixer.fix_brace_should_eol(line, pos)
-						elif error.code == "BRACE_NEWLINE":
-							# it inserts a new line inside current line, so we can continue fixing errors
-							code_fixer.fix_brace_newline(line, pos)
-
-						fix_machine.fix_count += 1
-
-					last_line = line
+			for error in errors_to_fix:
+				fix_machine.fix_norm_error(error)
 
 			fix_machine.save()
+			try_fix_count += _try_to_fix
 			total_fix_count += fix_machine.fix_count
 
 		if try_fix_count > 0:
 			self.handle_check(project, only_new=True)
+		new_total_errors = self._count_errors(self.norminette.state.result)
 
-		self.stdout.write(self.style.INFO(f"Norm errors: {total_errors}"))
+		self.stdout.write(self.style.INFO(f"Norm errors: {total_errors} -> {new_total_errors}"))
 		if try_fix_count == 0:
 			self.stdout.write(self.style.INFO("There is no any errors found that could be fixed by this plugin"))
 			return
 
-		self.stdout.write(self.style.INFO(f"Fixed norm errors: {total_fix_count} / {try_fix_count}"))
+		# self.stdout.write(self.style.INFO(f"Fixed norm errors: {total_fix_count} / {try_fix_count}"))
+
+	def _count_errors(self, result: Dict[str, NorminetteFileCheckResult]) -> int:
+		total_errors = 0
+		for file, info in result.items():
+			errors = info.get('errors')
+			if errors:
+				total_errors += len(errors)
+		return total_errors
+
+	def _iter_parsed_errors(self, errors: List[str]) -> Generator[NorminetteError, None, None]:
+		for error in errors:
+			_error = NorminetteError.parse(error)
+			if _error:
+				yield _error
+
+	def _handle_fix_by_norminette(self, project: Project, fix_machine: NorminetteFixMachine) -> Tuple[int, int]:
+		"""
+		:return: (total_fix_count, try_fix_count)
+		"""
+		try_fix_count = 0
+		total_fix_count = 0
+		fixed_files = 0
+
+		result = self.norminette.state.result
+		for file, info in result.items():
+			status = info["status"]
+
+			if status != NorminetteCheckStatus.ERROR:
+				continue
+
+			norminette_errors_to_fix: List[NorminetteError] = []
+			for error in self._iter_parsed_errors(info["errors"]):
+				if error.code in {
+					"RETURN_PARENTHESIS",
+				}:
+					norminette_errors_to_fix.append(error)
+
+			_try_to_fix = len(norminette_errors_to_fix)
+			if _try_to_fix == 0:
+				continue
+
+			path = Path(file)
+			if not path.exists():
+				continue
+
+			self.stdout.write(self.style.INFO(f'Trying to fix errors in {file} by norminette'))
+			fix_machine.load_file(path)
+			fix_machine.run_with_norminette()
+			fix_machine.save()
+
+			fixed_files += 1
+			try_fix_count += _try_to_fix
+			total_fix_count += fix_machine.fix_count
+
+		if fixed_files:
+			self.handle_check(project, silent=True)
+		return (try_fix_count, total_fix_count)
+
+	def _handle_fix_by_ast(self, project: Project, fix_machine: NorminetteFixMachine) -> int:
+		"""
+		:return: total_fix_count
+		"""
+		fixed_files = 0
+
+		result = self.norminette.state.result
+		errors_count = self._count_errors(result)
+		for file, info in result.items():
+			status = info["status"]
+
+			if status != NorminetteCheckStatus.ERROR:
+				continue
+
+			has_ast_error = False
+			for error in self._iter_parsed_errors(info["errors"]):
+				if error.code in {
+					"PREPROC_START_LINE",
+					"PREPROC_BAD_INDENT",
+					"EMPTY_LINE_EOF",
+					"EMPTY_LINE_FUNCTION",
+					"CONSECUTIVE_NEWLINES",
+					"EMPTY_LINE_FILE_START",
+					"SPACE_AFTER_KW",
+					"SPC_BFR_POINTER",
+					"SPC_AFTER_POINTER",
+					"NO_SPC_AFR_OPR",
+					"SPC_AFTER_PAR",
+					"NO_SPC_AFR_PAR",
+					"NO_SPC_BFR_PAR",
+					"SPC_BFR_PAR",
+					"NO_SPC_BFR_OPR",
+					"SPC_BFR_OPERATOR",
+					"SPC_AFTER_OPERATOR",
+					"TOO_MANY_INSTR",
+					"EOL_OPERATOR",
+					"TOO_MANY_TAB",
+					"TOO_FEW_TAB",
+					"MIXED_SPACE_TAB",
+					"COMMA_START_LINE",
+					"SPC_BEFORE_NL",
+					"NEWLINE_PRECEDES_FUNC",
+					"BRACE_NEWLINE",
+				}:
+					has_ast_error = True
+					break
+
+			if not has_ast_error:
+				continue
+
+			path = Path(file)
+			if not path.exists():
+				continue
+
+			self.stdout.write(self.style.INFO(f'Trying to fix errors in {file} by AST'))
+			fix_machine.load_file(path)
+			fix_machine.run_ast_refactoring()
+			fix_machine.save()
+
+			fixed_files += 1
+
+		if fixed_files:
+			self.handle_check(project, silent=True)
+			result = self.norminette.state.result
+			total_fix_count = errors_count - self._count_errors(result)
+		else:
+			total_fix_count = 0
+		return total_fix_count
 
 	def handle_stats(self, project: Project, **options) -> None:
 		result = self.norminette.state.result
