@@ -8,11 +8,7 @@ class FixLineIndent(CheckLineIndent):
 		Each new scope (function, control structure, struct/enum type declaration) adds a tab to the general indentation
 		"""
 		expected = context.scope.indent
-		if (
-			context.history[-1] == "IsEmptyLine"
-			or context.history[-1] == "IsComment"
-			or context.history[-1] == "IsPreprocessorStatement"
-		):
+		if context.history[-1] in ["IsEmptyLine", 'IsComment', "IsPreprocessorStatement", "IsVariableDeclaration", "IsAssignation"]:
 			return False, 0
 		if (
 			context.history[-1] != "IsPreprocessorStatement"

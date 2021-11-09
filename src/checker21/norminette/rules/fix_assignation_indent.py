@@ -46,14 +46,12 @@ class FixAssignationIndent(CheckAssignationIndent):
                     # set indent
                     context.peek_token(i + got).indent = nest
                     # ******************************************************************** #
-                    return True, i
                 elif got < nest or (got < nest - 1 and context.history[-1] in ["IsAssignation", "IsVarDeclaration"]):
                     # ****************************** FIX ********************************* #
                     # context.new_error("TOO_FEW_TAB", context.peek_token(i))
                     # set indent
                     context.peek_token(i + got).indent = nest
                     # ******************************************************************** #
-                    return True, i
                 if context.check_token(i + got, ["LBRACKET", "RBRACKET", "LBRACE", "RBRACE"]):
                     nest += 1
             if context.check_token(i, "LPARENTHESIS") is True:
